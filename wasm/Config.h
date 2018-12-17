@@ -16,8 +16,6 @@
 #include "llvm/Object/Wasm.h"
 #include "llvm/Support/CachePruning.h"
 
-#include <set>
-
 namespace lld {
 namespace wasm {
 
