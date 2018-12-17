@@ -13,12 +13,22 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/BinaryFormat/Wasm.h"
+#include "llvm/Object/Wasm.h"
 #include "llvm/Support/CachePruning.h"
+
+#include <set>
 
 namespace lld {
 namespace wasm {
 
 struct Configuration {
+  inline bool should_export(const llvm::wasm::WasmExport& ex)const {
+     for (auto x : exports) {
+        if (x.Name == ex.Name && x.Kind == ex.Kind)
+           return true;
+     }
+     return false;
+  }
   bool AllowUndefined;
   bool CompressRelocTargets;
   bool Demangle;
@@ -46,7 +56,7 @@ struct Configuration {
   llvm::StringRef Entry;
   llvm::StringRef OutputFile;
   llvm::StringRef ThinLTOCacheDir;
-
+  std::vector<llvm::wasm::WasmExport> exports;  
   llvm::StringSet<> AllowUndefinedSymbols;
   std::vector<llvm::StringRef> SearchPaths;
   llvm::CachePruningPolicy ThinLTOCachePolicy;

@@ -27,6 +27,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/TargetSelect.h"
+#include <cstring>
 
 #define DEBUG_TYPE "lld"
 
@@ -475,7 +476,24 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
     else if (!Config->AllowUndefined)
       error("symbol exported via --export not found: " + Name);
   }
-
+  
+  auto get_kind = [](const char* str) -> uint8_t {
+     if (strcmp(str, "function") == 0)
+        return 0;
+     else if (strcmp(str, "table") == 0)
+        return 1;
+     else if (strcmp(str, "memory") == 0)
+        return 2;
+     return 3;
+  };
+  for (auto *Arg : Args.filtered(OPT_only_export)) {
+     char* name = strtok(const_cast<char*>(Arg->getValue()), ":");
+     if (name) {
+        char* type = strtok(NULL, ":");
+        WasmExport we = {name, get_kind(type), 0};
+        Config->exports.push_back(we);
+     }
+  }
   if (EntrySym)
     EntrySym->setHidden(false);
 

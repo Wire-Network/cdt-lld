@@ -154,6 +154,8 @@ void wasm::writeImport(raw_ostream &OS, const WasmImport &Import) {
 }
 
 void wasm::writeExport(raw_ostream &OS, const WasmExport &Export) {
+  //if (!Config.shouldExport(Export))
+  //   return;
   writeStr(OS, Export.Name, "export name");
   writeU8(OS, Export.Kind, "export kind");
   switch (Export.Kind) {
