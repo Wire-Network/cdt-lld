@@ -227,14 +227,26 @@ void ObjFile::parse() {
   for (const WasmGlobal &G : WasmObj->globals())
     Globals.emplace_back(make<InputGlobal>(G, this));
 
+
   // Populate `Symbols` based on the WasmSymbols in the object.
   Symbols.reserve(WasmObj->getNumberOfSymbols());
   for (const SymbolRef &Sym : WasmObj->symbols()) {
     const WasmSymbol &WasmSym = WasmObj->getWasmSymbol(Sym.getRawDataRefImpl());
-    if (Symbol *Sym = createDefined(WasmSym))
-      Symbols.push_back(Sym);
-    else
-      Symbols.push_back(createUndefined(WasmSym));
+    bool should_define = true;
+    for (const auto &A : WasmObj->allowed_imports()) {
+       if (auto sym_name = Sym.getName()) {
+         if (*sym_name == A) {
+            Symtab->addAllowedUndefFunction(*sym_name);
+            break;
+         }
+       }
+    }
+    if (should_define) {
+       if (Symbol *Sym = createDefined(WasmSym))
+         Symbols.push_back(Sym);
+       else
+         Symbols.push_back(createUndefined(WasmSym));
+    }
   }
 }
 
