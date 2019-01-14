@@ -488,7 +488,7 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   };
   for (auto *Arg : Args.filtered(OPT_only_export)) {
      char* name = strtok(const_cast<char*>(Arg->getValue()), ":");
-     if (name) {
+     if (name || name[0] == '*') {
         char* type = strtok(NULL, ":");
         WasmExport we = {name, get_kind(type), 0};
         Config->exports.push_back(we);
