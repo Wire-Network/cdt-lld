@@ -66,6 +66,8 @@ void SymbolTable::reportRemainingUndefines() {
       continue;
     if (Config->AllowUndefinedSymbols.count(Sym->getName()) != 0)
       continue;
+    if (allowed.count(Sym->getName()) != 0)
+       continue;
     if (!Sym->IsUsedInRegularObj)
       continue;
     Undefs.insert(Sym);
@@ -75,9 +77,10 @@ void SymbolTable::reportRemainingUndefines() {
     return;
 
   for (ObjFile *File : ObjectFiles)
-    for (Symbol *Sym : File->getSymbols())
+    for (Symbol *Sym : File->getSymbols()) {
       if (Undefs.count(Sym))
         error(toString(File) + ": undefined symbol: " + toString(*Sym));
+     }
 
   for (Symbol *Sym : Undefs)
     if (!Sym->getFile())
