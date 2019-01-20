@@ -201,8 +201,10 @@ void Writer::createFunctionSection() {
   raw_ostream &OS = Section->getStream();
 
   writeUleb128(OS, InputFunctions.size(), "function count");
-  for (const InputFunction *Func : InputFunctions)
+  for (const InputFunction *Func : InputFunctions) {
+    llvm::outs() << Func->getName() << '\n';
     writeUleb128(OS, lookupType(Func->Signature), "sig index");
+  }
 }
 
 void Writer::createMemorySection() {

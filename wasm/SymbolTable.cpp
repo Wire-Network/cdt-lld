@@ -193,7 +193,7 @@ static bool shouldReplace(const Symbol *Existing, InputFile *NewFile,
     return true;
   }
 
-  // Neither symbol is week. They conflict.
+  // Neither symbol is weak. They conflict.
   error("duplicate symbol: " + toString(*Existing) + "\n>>> defined in " +
         toString(Existing->getFile()) + "\n>>> defined in " +
         toString(NewFile));
