@@ -46,6 +46,9 @@ defm merge_data_segments: B<"merge-data-segments",
 
 def help: F<"help">, HelpText<"Print option help">;
 
+def only_export: JoinedOrSeparate<["--"], "only-export">, MetaVarName<"<export name>, <export kind>">,
+  HelpText<"only export">;
+
 def l: JoinedOrSeparate<["-"], "l">, MetaVarName<"<libName>">,
   HelpText<"Root name of library to use">;
 

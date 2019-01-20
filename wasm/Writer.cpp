@@ -271,10 +271,17 @@ void Writer::createExportSection() {
 
   SyntheticSection *Section = createSyntheticSection(WASM_SEC_EXPORT);
   raw_ostream &OS = Section->getStream();
-
-  writeUleb128(OS, Exports.size(), "export count");
-  for (const WasmExport &Export : Exports)
-    writeExport(OS, Export);
+   
+  std::vector<WasmExport> filtered_exports;
+  for (auto ex : Exports) {
+     if (Config->should_export(ex))
+        filtered_exports.push_back(ex);
+  }
+  writeUleb128(OS, filtered_exports.size(), "export count");
+  for (const WasmExport &Export : filtered_exports) {
+     writeExport(OS, Export);
+  }
+  Exports = filtered_exports;
 }
 
 void Writer::calculateCustomSections() {
