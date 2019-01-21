@@ -113,6 +113,7 @@ public:
 
   const WasmSection *CodeSection = nullptr;
   const WasmSection *DataSection = nullptr;
+  StringRef EosioABI;
 
   // Maps input type indices to output type indices
   std::vector<uint32_t> TypeMap;

@@ -202,7 +202,6 @@ void Writer::createFunctionSection() {
 
   writeUleb128(OS, InputFunctions.size(), "function count");
   for (const InputFunction *Func : InputFunctions) {
-    llvm::outs() << Func->getName() << '\n';
     writeUleb128(OS, lookupType(Func->Signature), "sig index");
   }
 }

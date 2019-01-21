@@ -57,12 +57,12 @@ void lld::wasm::markLive() {
   for (Symbol *Sym : Symtab->getSymbols())
     if (!Sym->isHidden())
       Enqueue(Sym);
-  
+  /* 
   // check for dispatch and notify stubs 
   for (Symbol *Sym : Symtab->getSymbols())
      if (isApplyStub(Sym->getName()))
         Enqueue(Sym);
-
+   */
   // The ctor functions are all used in the synthetic __wasm_call_ctors
   // function, but since this function is created in-place it doesn't contain
   // relocations which mean we have to manually mark the ctors.

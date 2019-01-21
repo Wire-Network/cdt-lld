@@ -177,7 +177,8 @@ void ObjFile::parse() {
       TableEntries[FunctionIndex] = Offset + Index;
     }
   }
-
+  
+  llvm::outs() << "ABI " << WasmObj->get_eosio_abi() << '\n';
   // Find the code and data sections.  Wasm objects can have at most one code
   // and one data section.
   uint32_t SectionIndex = 0;
