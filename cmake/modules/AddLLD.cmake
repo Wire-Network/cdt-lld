@@ -9,6 +9,9 @@ macro(add_lld_library name)
   endif()
   llvm_add_library(${name} ${ARG_ENABLE_SHARED} ${ARG_UNPARSED_ARGUMENTS})
   set_target_properties(${name} PROPERTIES FOLDER "lld libraries")
+  target_compile_options(${name} PUBLIC -fexceptions -Wno-reorder -Wno-sign-compare -Wno-unused-local-typedefs)
+  target_include_directories(${name} PUBLIC ${EOSIO_TOOL_DIR}/jsoncons/include)
+  target_include_directories(${name} PUBLIC ${EOSIO_TOOL_DIR}/include)
 
   if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
     if(${name} IN_LIST LLVM_DISTRIBUTION_COMPONENTS OR

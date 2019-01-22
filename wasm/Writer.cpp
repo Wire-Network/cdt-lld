@@ -27,9 +27,11 @@
 #include "llvm/Support/Format.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/LEB128.h"
+#include "llvm/Support/Path.h"
 
 #include <cstdarg>
 #include <map>
+#include <eosio/abimerge.hpp>
 
 #define DEBUG_TYPE "lld"
 
@@ -63,6 +65,7 @@ private:
   uint32_t registerType(const WasmSignature &Sig);
 
   void createCtorFunction();
+  void createDispatchFunction();
   void calculateInitFunctions();
   void assignIndexes();
   void calculateImports();
@@ -96,6 +99,24 @@ private:
 
   void writeHeader();
   void writeSections();
+  void writeABI() {
+     ABIMerger merger(ojson::parse(abis.back()));
+     for (auto abi : abis) {
+        merger.set_abi(merger.merge(ojson::parse(abi)));
+     }
+     Expected<std::unique_ptr<FileOutputBuffer>> BufferOrErr =
+         FileOutputBuffer::create((llvm::sys::path::stem(Config->OutputFile)+".abi").str(), merger.get_abi_string().size());
+
+     if (!BufferOrErr)
+       error("failed to open " + Config->OutputFile + ": " +
+             toString(BufferOrErr.takeError()));
+     else {
+       auto Buffer = std::move(*BufferOrErr);
+       memcpy(Buffer->getBufferStart(), merger.get_abi_string().c_str(), merger.get_abi_string().size());
+       if (Error E = Buffer->commit())
+          fatal("failed to write the output file: " + toString(std::move(E)));
+     }
+  }
 
   uint64_t FileSize = 0;
   uint32_t NumMemoryPages = 0;
@@ -113,6 +134,7 @@ private:
   std::vector<const FunctionSymbol *> IndirectFunctions;
   std::vector<const Symbol *> SymtabEntries;
   std::vector<WasmInitEntry> InitFunctions;
+  std::vector<std::string> abis;
 
   llvm::StringMap<std::vector<InputSection *>> CustomSectionMapping;
   llvm::StringMap<SectionSymbol *> CustomSectionSymbols;
@@ -947,6 +969,8 @@ static StringRef getOutputDataSegmentName(StringRef Name) {
 
 void Writer::createOutputSegments() {
   for (ObjFile *File : Symtab->ObjectFiles) {
+    if (!File->getEosioABI().empty())
+       abis.push_back(File->getEosioABI());
     for (InputSegment *Segment : File->Segments) {
       if (!Segment->Live)
         continue;
@@ -965,6 +989,29 @@ void Writer::createOutputSegments() {
 
 static const int OPCODE_CALL = 0x10;
 static const int OPCODE_END = 0xb;
+
+void Writer::createDispatchFunction() {
+
+   //for (ObjFile *File : Symtab->ObjectFiles) {
+   std::string BodyContent;
+   {
+      raw_string_ostream OS(BodyContent);
+      writeUleb128(OS, 0, "num locals");
+      writeU8(OS, OPCODE_CALL, "CALL");
+      writeUleb128(OS, 13, "function index");
+   }
+   writeU8(OS, OPCODE_END, "END");
+
+   std::string FunctionBody;
+   {
+      raw_string_ostream OS(FunctionBody);
+      writeUleb128(OS, BodyContent.size(), "function size");
+      OS << BodyContent;
+   }
+
+   ArrayRef<uint8_t> Body = toArrayRef(Saver.save(FunctionBody));
+   cast<SyntheticFunction>(WasmSym::C
+}
 
 // Create synthetic "__wasm_call_ctors" function based on ctor functions
 // in input object.
@@ -1065,6 +1112,8 @@ void Writer::run() {
 
   if (Error E = Buffer->commit())
     fatal("failed to write the output file: " + toString(std::move(E)));
+
+  writeABI();
 }
 
 // Open a result file.

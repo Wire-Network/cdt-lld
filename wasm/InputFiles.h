@@ -67,6 +67,7 @@ public:
 
   ArrayRef<Symbol *> getSymbols() const { return Symbols; }
 
+  StringRef EosioABI;
 protected:
   InputFile(Kind K, MemoryBufferRef M) : MB(M), FileKind(K) {}
   MemoryBufferRef MB;
@@ -113,7 +114,6 @@ public:
 
   const WasmSection *CodeSection = nullptr;
   const WasmSection *DataSection = nullptr;
-  StringRef EosioABI;
 
   // Maps input type indices to output type indices
   std::vector<uint32_t> TypeMap;
@@ -132,8 +132,9 @@ public:
   DataSymbol *getDataSymbol(uint32_t Index) const;
   GlobalSymbol *getGlobalSymbol(uint32_t Index) const;
   SectionSymbol *getSectionSymbol(uint32_t Index) const;
-
+  std::string getEosioABI() const { return eosio_abi; }
 private:
+  std::string eosio_abi;
   Symbol *createDefined(const WasmSymbol &Sym);
   Symbol *createUndefined(const WasmSymbol &Sym);
 
