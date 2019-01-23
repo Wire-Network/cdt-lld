@@ -307,6 +307,10 @@ struct WasmSym {
   // Function that directly calls all ctors in priority order.
   static DefinedFunction *CallCtors;
 
+  // EntryFunc
+  // Function that is the entry
+  static DefinedFunction *EntryFunc;
+
   // __dso_handle
   // Symbol used in calls to __cxa_atexit to determine current DLL
   static DefinedData *DsoHandle;

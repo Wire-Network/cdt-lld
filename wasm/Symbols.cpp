@@ -23,6 +23,7 @@ using namespace llvm::wasm;
 using namespace lld;
 using namespace lld::wasm;
 
+DefinedFunction *WasmSym::EntryFunc;
 DefinedFunction *WasmSym::CallCtors;
 DefinedData *WasmSym::DsoHandle;
 DefinedData *WasmSym::DataEnd;

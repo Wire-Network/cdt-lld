@@ -133,8 +133,12 @@ public:
   GlobalSymbol *getGlobalSymbol(uint32_t Index) const;
   SectionSymbol *getSectionSymbol(uint32_t Index) const;
   std::string getEosioABI() const { return eosio_abi; }
+  ArrayRef<StringRef> getEosioActions() const { return eosio_actions; }
+  ArrayRef<StringRef> getEosioNotify() const { return eosio_notify; }
 private:
   std::string eosio_abi;
+  ArrayRef<StringRef> eosio_actions;
+  ArrayRef<StringRef> eosio_notify;
   Symbol *createDefined(const WasmSymbol &Sym);
   Symbol *createUndefined(const WasmSymbol &Sym);
 

@@ -400,11 +400,17 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
     StackPointer->Live = true;
 
     static WasmSignature NullSignature = {{}, WASM_TYPE_NORESULT};
+    static WasmSignature EntrySignature = {{WASM_TYPE_I64, WASM_TYPE_I64, WASM_TYPE_I64}, WASM_TYPE_NORESULT};
 
     // Add synthetic symbols before any others
     WasmSym::CallCtors = Symtab->addSyntheticFunction(
         "__wasm_call_ctors", WASM_SYMBOL_VISIBILITY_HIDDEN,
         make<SyntheticFunction>(NullSignature, "__wasm_call_ctors"));
+
+    WasmSym::EntryFunc = Symtab->addSyntheticFunction(
+        "apply", WASM_SYMBOL_VISIBILITY_DEFAULT,
+        make<SyntheticFunction>(EntrySignature, "apply"));
+
     // TODO(sbc): Remove WASM_SYMBOL_VISIBILITY_HIDDEN when the mutable global
     // spec proposal is implemented in all major browsers.
     // See: https://github.com/WebAssembly/mutable-global

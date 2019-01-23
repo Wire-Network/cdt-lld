@@ -988,19 +988,44 @@ void Writer::createOutputSegments() {
 }
 
 static const int OPCODE_CALL = 0x10;
-static const int OPCODE_END = 0xb;
+static const int OPCODE_IF   = 0x4;
+static const int OPCODE_ELSE = 0x5;
+static const int OPCODE_END  = 0xb;
+static const int OPCODE_GET_LOCAL = 0x20;
+static const int OPCODE_I64_EQ    = 0x51;
+static const int OPCODE_I64_CONST = 0x42;
+
+#define GET_LOCALS \
+      writeU8(OS, OPCODE_GET_LOCAL, "GET_LOCAL"); \
+      writeUleb128(OS, 0, "arg 0"); \
+      writeU8(OS, OPCODE_GET_LOCAL, "GET_LOCAL"); \
+      writeUleb128(OS, 1, "arg 1"); \
+      writeU8(OS, OPCODE_GET_LOCAL, "GET_LOCAL"); \
+      writeUleb128(OS, 2, "arg 2");
 
 void Writer::createDispatchFunction() {
+   
+   auto create_if(auto os, auto str) {
+   }
 
    //for (ObjFile *File : Symtab->ObjectFiles) {
    std::string BodyContent;
    {
       raw_string_ostream OS(BodyContent);
       writeUleb128(OS, 0, "num locals");
+      writeU8(OS, OPCODE_GET_LOCAL, "GET_LOCAL");
+      writeUleb128(OS, 0, "arg 0");
+      writeU8(OS, OPCODE_GET_LOCAL, "GET_LOCAL");
+      writeUleb128(OS, 1, "arg 1");
+      writeU8(OS, OPCODE_I64_EQ, "I64.EQ");
+      writeU8(OS, OPCODE_IF, "IF");
+      writeU8(OS, 0x40, "none");
+      GET_LOCALS
       writeU8(OS, OPCODE_CALL, "CALL");
       writeUleb128(OS, 13, "function index");
+      writeU8(OS, OPCODE_END, "END");
+      writeU8(OS, OPCODE_END, "END");
    }
-   writeU8(OS, OPCODE_END, "END");
 
    std::string FunctionBody;
    {
@@ -1010,7 +1035,7 @@ void Writer::createDispatchFunction() {
    }
 
    ArrayRef<uint8_t> Body = toArrayRef(Saver.save(FunctionBody));
-   cast<SyntheticFunction>(WasmSym::C
+   cast<SyntheticFunction>(WasmSym::EntryFunc->Function)->setBody(Body);
 }
 
 // Create synthetic "__wasm_call_ctors" function based on ctor functions
@@ -1074,6 +1099,7 @@ void Writer::run() {
   calculateInitFunctions();
   if (!Config->Relocatable)
     createCtorFunction();
+  createDispatchFunction();
   log("-- calculateTypes");
   calculateTypes();
   log("-- layoutMemory");
