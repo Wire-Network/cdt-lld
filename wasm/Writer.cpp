@@ -32,6 +32,7 @@
 #include <cstdarg>
 #include <map>
 #include <eosio/abimerge.hpp>
+#include <eosio/utils.hpp>
 
 #define DEBUG_TYPE "lld"
 
@@ -56,7 +57,7 @@ struct WasmInitEntry {
 // The writer writes a SymbolTable result to a file.
 class Writer {
 public:
-  void run();
+  void run(bool is_entry_defined);
 
 private:
   void openFile();
@@ -995,20 +996,47 @@ static const int OPCODE_GET_LOCAL = 0x20;
 static const int OPCODE_I64_EQ    = 0x51;
 static const int OPCODE_I64_CONST = 0x42;
 
-#define GET_LOCALS \
-      writeU8(OS, OPCODE_GET_LOCAL, "GET_LOCAL"); \
-      writeUleb128(OS, 0, "arg 0"); \
-      writeU8(OS, OPCODE_GET_LOCAL, "GET_LOCAL"); \
-      writeUleb128(OS, 1, "arg 1"); \
-      writeU8(OS, OPCODE_GET_LOCAL, "GET_LOCAL"); \
-      writeUleb128(OS, 2, "arg 2");
-
 void Writer::createDispatchFunction() {
    
-   auto create_if(auto os, auto str) {
-   }
+   auto get_function = [&](std::string func_name) -> int64_t {
+      for (ObjFile *File : Symtab->ObjectFiles) {
+         for (auto func : File->Functions) {
+            if (func->getName().str() == func_name) {
+               return func->getFunctionIndex();
+            }
+         }
+      }
+      return -1;
+   };
 
-   //for (ObjFile *File : Symtab->ObjectFiles) {
+   auto create_if = [&](raw_string_ostream& os, std::string str, bool& need_else) {
+      if (need_else) {
+         writeU8(os, OPCODE_ELSE, "ELSE");
+      }
+      need_else = true;
+      writeU8(os, OPCODE_I64_CONST, "I64 CONST");
+      uint64_t nm = eosio::cdt::string_to_name(str.substr(0, str.find(":")).c_str());
+      llvm::outs() << "NM "  << (int64_t)nm << " ? " <<  nm << ' ' << str.substr(0, str.find(":")).c_str() << '\n';
+      encodeSLEB128((int64_t)nm, os);
+      writeU8(os, OPCODE_GET_LOCAL, "GET_LOCAL");
+      writeUleb128(os, 1, "arg 1");
+      writeU8(os, OPCODE_I64_EQ, "I64_EQ");
+      writeU8(os, OPCODE_IF, "IF action == name");
+      writeU8(os, 0x40, "none");
+      writeU8(os, OPCODE_GET_LOCAL, "GET_LOCAL");
+      writeUleb128(os, 0, "arg 0");
+      writeU8(os, OPCODE_GET_LOCAL, "GET_LOCAL");
+      writeUleb128(os, 1, "arg 1");
+      writeU8(os, OPCODE_GET_LOCAL, "GET_LOCAL");
+      writeUleb128(os, 2, "arg 2");
+      writeU8(os, OPCODE_CALL, "CALL");
+      int64_t index = get_function(str.substr(str.find(":")+1));
+      if (index >= 0)
+         writeUleb128(os, (int)index, "index");
+      else
+         throw std::runtime_error("wasm_ld internal error function not found");
+   };
+
    std::string BodyContent;
    {
       raw_string_ostream OS(BodyContent);
@@ -1018,11 +1046,16 @@ void Writer::createDispatchFunction() {
       writeU8(OS, OPCODE_GET_LOCAL, "GET_LOCAL");
       writeUleb128(OS, 1, "arg 1");
       writeU8(OS, OPCODE_I64_EQ, "I64.EQ");
-      writeU8(OS, OPCODE_IF, "IF");
+      writeU8(OS, OPCODE_IF, "IF code==receiver");
       writeU8(OS, 0x40, "none");
-      GET_LOCALS
-      writeU8(OS, OPCODE_CALL, "CALL");
-      writeUleb128(OS, 13, "function index");
+      bool need_else = false;
+      for (ObjFile *File : Symtab->ObjectFiles) {
+         if (!File->getEosioActions().empty()) {
+            for (auto act : File->getEosioActions()) {
+               create_if(OS, act.str(), need_else);
+            }
+         }
+      }
       writeU8(OS, OPCODE_END, "END");
       writeU8(OS, OPCODE_END, "END");
    }
@@ -1087,7 +1120,7 @@ void Writer::calculateInitFunctions() {
                    });
 }
 
-void Writer::run() {
+void Writer::run(bool is_entry_defined) {
   if (Config->Relocatable)
     Config->GlobalBase = 0;
 
@@ -1099,7 +1132,11 @@ void Writer::run() {
   calculateInitFunctions();
   if (!Config->Relocatable)
     createCtorFunction();
+
   createDispatchFunction();
+  //if (!is_entry_defined) {
+  //   createDispatchFunction();
+  //}
   log("-- calculateTypes");
   calculateTypes();
   log("-- layoutMemory");
@@ -1165,4 +1202,4 @@ void Writer::createHeader() {
   FileSize += Header.size();
 }
 
-void lld::wasm::writeResult() { Writer().run(); }
+void lld::wasm::writeResult(bool is_entry_defined) { Writer().run(is_entry_defined); }

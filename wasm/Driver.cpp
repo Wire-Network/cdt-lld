@@ -400,16 +400,16 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
     StackPointer->Live = true;
 
     static WasmSignature NullSignature = {{}, WASM_TYPE_NORESULT};
-    static WasmSignature EntrySignature = {{WASM_TYPE_I64, WASM_TYPE_I64, WASM_TYPE_I64}, WASM_TYPE_NORESULT};
 
     // Add synthetic symbols before any others
     WasmSym::CallCtors = Symtab->addSyntheticFunction(
         "__wasm_call_ctors", WASM_SYMBOL_VISIBILITY_HIDDEN,
         make<SyntheticFunction>(NullSignature, "__wasm_call_ctors"));
 
+    static WasmSignature EntrySignature = {{WASM_TYPE_I64, WASM_TYPE_I64, WASM_TYPE_I64}, WASM_TYPE_NORESULT};
     WasmSym::EntryFunc = Symtab->addSyntheticFunction(
-        "apply", WASM_SYMBOL_VISIBILITY_DEFAULT,
-        make<SyntheticFunction>(EntrySignature, "apply"));
+         Config->Entry, WASM_SYMBOL_VISIBILITY_DEFAULT | WASM_SYMBOL_BINDING_WEAK,
+         make<SyntheticFunction>(EntrySignature, Config->Entry));
 
     // TODO(sbc): Remove WASM_SYMBOL_VISIBILITY_HIDDEN when the mutable global
     // spec proposal is implemented in all major browsers.
@@ -467,7 +467,7 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
         error("symbol forced with --undefined not found: " + Sym->getName());
     }
     if (EntrySym && !EntrySym->isDefined())
-      error("entry symbol not defined (pass --no-entry to supress): " +
+       error("entry symbol not defined (pass --no-entry to supress): " +
             EntrySym->getName());
   }
   if (errorCount())
@@ -510,5 +510,5 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   markLive();
 
   // Write the result to the file.
-  writeResult();
+  writeResult(EntrySym->isDefined());
 }

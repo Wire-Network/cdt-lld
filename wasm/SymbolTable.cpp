@@ -83,8 +83,10 @@ void SymbolTable::reportRemainingUndefines() {
      }
 
   for (Symbol *Sym : Undefs)
-    if (!Sym->getFile())
-      error("undefined symbol: " + toString(*Sym));
+    if (!Sym->getFile()) {
+      if (toString(*Sym) != Config->Entry)
+         error("undefined symbol: " + toString(*Sym));
+    }
 }
 
 Symbol *SymbolTable::find(StringRef Name) {
