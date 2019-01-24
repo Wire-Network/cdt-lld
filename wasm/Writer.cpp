@@ -101,21 +101,25 @@ private:
   void writeHeader();
   void writeSections();
   void writeABI() {
-     ABIMerger merger(ojson::parse(abis.back()));
-     for (auto abi : abis) {
-        merger.set_abi(merger.merge(ojson::parse(abi)));
-     }
-     Expected<std::unique_ptr<FileOutputBuffer>> BufferOrErr =
-         FileOutputBuffer::create((llvm::sys::path::stem(Config->OutputFile)+".abi").str(), merger.get_abi_string().size());
+     try {
+        ABIMerger merger(ojson::parse(abis.back()));
+        for (auto abi : abis) {
+           merger.set_abi(merger.merge(ojson::parse(abi)));
+        }
+        Expected<std::unique_ptr<FileOutputBuffer>> BufferOrErr =
+            FileOutputBuffer::create((llvm::sys::path::stem(Config->OutputFile)+".abi").str(), merger.get_abi_string().size());
 
-     if (!BufferOrErr)
-       error("failed to open " + Config->OutputFile + ": " +
-             toString(BufferOrErr.takeError()));
-     else {
-       auto Buffer = std::move(*BufferOrErr);
-       memcpy(Buffer->getBufferStart(), merger.get_abi_string().c_str(), merger.get_abi_string().size());
-       if (Error E = Buffer->commit())
-          fatal("failed to write the output file: " + toString(std::move(E)));
+        if (!BufferOrErr)
+          error("failed to open " + Config->OutputFile + ": " +
+                toString(BufferOrErr.takeError()));
+        else {
+          auto Buffer = std::move(*BufferOrErr);
+          memcpy(Buffer->getBufferStart(), merger.get_abi_string().c_str(), merger.get_abi_string().size());
+          if (Error E = Buffer->commit())
+             fatal("failed to write the output file: " + toString(std::move(E)));
+        }
+     } catch (std::runtime_error& err) {
+        fatal(std::string(std::string("failed to write abi: ") + err.what()).c_str());
      }
   }
 
@@ -988,14 +992,16 @@ void Writer::createOutputSegments() {
   }
 }
 
-static const int OPCODE_CALL = 0x10;
-static const int OPCODE_IF   = 0x4;
-static const int OPCODE_ELSE = 0x5;
-static const int OPCODE_END  = 0xb;
-static const int OPCODE_GET_LOCAL = 0x20;
-static const int OPCODE_I64_EQ    = 0x51;
-static const int OPCODE_I32_CONST = 0x41;
-static const int OPCODE_I64_CONST = 0x42;
+static constexpr int OPCODE_CALL = 0x10;
+static constexpr int OPCODE_IF   = 0x4;
+static constexpr int OPCODE_ELSE = 0x5;
+static constexpr int OPCODE_END  = 0xb;
+static constexpr int OPCODE_GET_LOCAL = 0x20;
+static constexpr int OPCODE_I64_EQ    = 0x51;
+static constexpr int OPCODE_I32_CONST = 0x41;
+static constexpr int OPCODE_I64_CONST = 0x42;
+static constexpr int EOSIO_ERROR_NO_ACTION = 90000;
+static constexpr int EOSIO_ERROR_ONERROR   = 90001;
 
 void Writer::createDispatchFunction() {
    
@@ -1050,6 +1056,30 @@ void Writer::createDispatchFunction() {
          }
       }
 
+      int act_cnt = 0;
+      for (ObjFile *File : Symtab->ObjectFiles) {
+         if (!File->getEosioActions().empty()) {
+            for (auto act : File->getEosioActions()) {
+               act_cnt++;
+            }
+         }
+      }
+      int not_cnt = 0;
+
+      std::map<std::string, std::vector<std::string>> notify_handlers;
+      for (ObjFile *File : Symtab->ObjectFiles) {
+         if (!File->getEosioNotify().empty()) {
+            for (auto notif : File->getEosioNotify()) {
+               not_cnt++;
+               std::string snotif = notif.str();
+               size_t idx = snotif.find(":");
+               auto code_name = snotif.substr(0, idx);
+               auto rest      = snotif.substr(idx+1);
+               notify_handlers[code_name].push_back(rest);
+            }
+         }
+      }
+
       auto pre_sym = (FunctionSymbol*)Symtab->find("pre_dispatch");
       if (pre_sym) {
          uint32_t pre_idx  = pre_sym->getFunctionIndex();
@@ -1068,33 +1098,79 @@ void Writer::createDispatchFunction() {
       writeU8(OS, OPCODE_GET_LOCAL, "GET_LOCAL");
       writeUleb128(OS, 1, "code");
 
-
       writeU8(OS, OPCODE_I64_EQ, "I64.EQ");
       writeU8(OS, OPCODE_IF, "IF code==receiver");
       writeU8(OS, 0x40, "none");
 
-      bool need_else = false;
-      int act_cnt = 0;
-      for (ObjFile *File : Symtab->ObjectFiles) {
-         if (!File->getEosioActions().empty()) {
-            for (auto act : File->getEosioActions()) {
-               act_cnt++;
-               create_if(OS, act.str(), need_else);
+      if (act_cnt > 0) {
+         bool need_else = false;
+         for (ObjFile *File : Symtab->ObjectFiles) {
+            if (!File->getEosioActions().empty()) {
+               for (auto act : File->getEosioActions()) {
+                  create_if(OS, act.str(), need_else);
+               }
             }
          }
+         writeU8(OS, OPCODE_ELSE, "ELSE");
       }
-      writeU8(OS, OPCODE_ELSE, "ELSE");
-      writeU8(OS, OPCODE_CALL, "CALL");
-      auto assert_sym = (FunctionSymbol*)Symtab->find("eosio_assert");
+      // assert that no action was found
+      writeU8(OS, OPCODE_I32_CONST, "I32.CONST");
+      writeUleb128(OS, 0, "false");
+      writeU8(OS, OPCODE_I64_CONST, "I64.CONST");
+      writeUleb128(OS, EOSIO_ERROR_NO_ACTION, "error code");
+      auto assert_sym = (FunctionSymbol*)Symtab->find("eosio_assert_code");
       uint32_t assert_idx = assert_sym->getFunctionIndex();
+      writeU8(OS, OPCODE_CALL, "CALL");
+      writeUleb128(OS, assert_idx, "code");
       for (int i=0; i < act_cnt; i++) {
          writeU8(OS, OPCODE_END, "END");
       }
+      
       writeU8(OS, OPCODE_ELSE, "ELSE");
-      //writeU8(OS, OPCODE_GET_LOCAL, "GET_LOCAL");
-      //writeUleb128(OS, 1, "code");
-      //writeU8(OS, OPCODE_CALL, "CALL");
-      //writeUleb128(OS, 2, "code");
+
+      // assert on onerror
+      writeU8(OS, OPCODE_I64_CONST, "I64.CONST");
+      uint64_t nm = eosio::cdt::string_to_name("onerror");
+      encodeSLEB128((int64_t)nm, OS);
+      writeU8(OS, OPCODE_GET_LOCAL, "GET_LOCAL");
+      writeUleb128(OS, 2, "action");
+      writeU8(OS, OPCODE_I64_EQ, "I64.EQ");
+      writeU8(OS, OPCODE_IF, "IF action==onerror");
+      writeU8(OS, 0x40, "none");
+      writeU8(OS, OPCODE_I32_CONST, "I32.CONST");
+      writeUleb128(OS, 0, "false");
+      writeU8(OS, OPCODE_I64_CONST, "I64.CONST");
+      writeUleb128(OS, EOSIO_ERROR_ONERROR, "error code");
+      writeU8(OS, OPCODE_CALL, "CALL");
+      writeUleb128(OS, assert_idx, "code");
+
+      // dispatch notification handlers
+      writeU8(OS, OPCODE_ELSE, "ELSE");
+      bool notify0_need_else = false;
+      for (auto const& notif0 : notify_handlers) {
+         if (notify0_need_else)
+            writeU8(OS, OPCODE_ELSE, "ELSE");
+         writeU8(OS, OPCODE_I64_CONST, "I64.CONST");
+         llvm::outs() << "NM " << notif0.first << '\n';
+         uint64_t nm = eosio::cdt::string_to_name(notif0.first.c_str());
+         encodeSLEB128((int64_t)nm, OS);
+         writeU8(OS, OPCODE_GET_LOCAL, "GET_LOCAL");
+         writeUleb128(OS, 1, "code");
+         writeU8(OS, OPCODE_I64_EQ, "I64.EQ");
+         writeU8(OS, OPCODE_IF, "IF code==?");
+         writeU8(OS, 0x40, "none");
+         bool need_else = false;
+         for (auto const& notif1 : notif0.second) {
+            create_if(OS, notif1, need_else);
+         }
+         for (int i=0; i < notif0.second.size(); i++) {
+            writeU8(OS, OPCODE_END, "END");
+         }
+         notify0_need_else = true;
+      }
+      for (int i=0; i < notify_handlers.size(); i++)
+         writeU8(OS, OPCODE_END, "END");
+      writeU8(OS, OPCODE_END, "END");
       writeU8(OS, OPCODE_END, "END");
 
       auto post_sym = (FunctionSymbol*)Symtab->find("post_dispatch");

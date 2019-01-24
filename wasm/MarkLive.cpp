@@ -78,7 +78,7 @@ void lld::wasm::markLive() {
             if (func.SymbolName == act.substr(act.find(":")+1)) {
                Enqueue(Symtab->find(func.SymbolName));
             }
-            if (func.SymbolName == "pre_dispatch" || func.SymbolName == "post_dispatch" ) {
+            if (func.SymbolName == "pre_dispatch" || func.SymbolName == "post_dispatch" || func.SymbolName == "eosio_assert_code" ) {
                Enqueue(Symtab->find(func.SymbolName));
             }
         }
@@ -90,7 +90,8 @@ void lld::wasm::markLive() {
      auto wasm_obj = Obj->getWasmObj();
      for (auto func : wasm_obj->functions()) {
         for (auto _not : wasm_obj->notify()) {
-            if (func.SymbolName == _not.substr(_not.find(":")+1)) {
+            std::string sub = _not.substr(_not.find(":")+1);
+            if (func.SymbolName == sub.substr(sub.find(":")+1)) {
                Enqueue(Symtab->find(func.SymbolName));
             }
         }
