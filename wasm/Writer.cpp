@@ -1147,30 +1147,43 @@ void Writer::createDispatchFunction() {
       // dispatch notification handlers
       writeU8(OS, OPCODE_ELSE, "ELSE");
       bool notify0_need_else = false;
-      for (auto const& notif0 : notify_handlers) {
-         if (notify0_need_else)
-            writeU8(OS, OPCODE_ELSE, "ELSE");
-         writeU8(OS, OPCODE_I64_CONST, "I64.CONST");
-         llvm::outs() << "NM " << notif0.first << '\n';
-         uint64_t nm = eosio::cdt::string_to_name(notif0.first.c_str());
-         encodeSLEB128((int64_t)nm, OS);
-         writeU8(OS, OPCODE_GET_LOCAL, "GET_LOCAL");
-         writeUleb128(OS, 1, "code");
-         writeU8(OS, OPCODE_I64_EQ, "I64.EQ");
-         writeU8(OS, OPCODE_IF, "IF code==?");
-         writeU8(OS, 0x40, "none");
+      if (not_cnt > 0) {
+         for (auto const& notif0 : notify_handlers) {
+            uint64_t nm = eosio::cdt::string_to_name(notif0.first.c_str());
+            if (notif0.first == "*")
+               continue;
+            if (notify0_need_else)
+               writeU8(OS, OPCODE_ELSE, "ELSE");
+            writeU8(OS, OPCODE_I64_CONST, "I64.CONST");
+            encodeSLEB128((int64_t)nm, OS);
+            writeU8(OS, OPCODE_GET_LOCAL, "GET_LOCAL");
+            writeUleb128(OS, 1, "code");
+            writeU8(OS, OPCODE_I64_EQ, "I64.EQ");
+            writeU8(OS, OPCODE_IF, "IF code==?");
+            writeU8(OS, 0x40, "none");
+            bool need_else = false;
+            for (auto const& notif1 : notif0.second) {
+               create_if(OS, notif1, need_else);
+            }
+            for (int i=0; i < notif0.second.size(); i++) {
+               writeU8(OS, OPCODE_END, "END");
+            }
+            notify0_need_else = true;
+         }
+         writeU8(OS, OPCODE_ELSE, "ELSE");
+      }
+      if (!notify_handlers["*"].empty()) {
          bool need_else = false;
-         for (auto const& notif1 : notif0.second) {
+         for (auto const& notif1 : notify_handlers["*"]) {
             create_if(OS, notif1, need_else);
          }
-         for (int i=0; i < notif0.second.size(); i++) {
+         for (int i=0; i < notify_handlers["*"].size(); i++) {
             writeU8(OS, OPCODE_END, "END");
          }
-         notify0_need_else = true;
       }
       for (int i=0; i < notify_handlers.size(); i++)
          writeU8(OS, OPCODE_END, "END");
-      writeU8(OS, OPCODE_END, "END");
+      //writeU8(OS, OPCODE_END, "END");
       writeU8(OS, OPCODE_END, "END");
 
       auto post_sym = (FunctionSymbol*)Symtab->find("post_dispatch");
