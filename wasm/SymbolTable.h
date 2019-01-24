@@ -47,6 +47,7 @@ public:
   std::vector<InputFunction *> SyntheticFunctions;
   std::vector<InputGlobal *> SyntheticGlobals;
   std::set<StringRef> allowed;
+  bool EntryIsUndefined = true;
 
   void reportRemainingUndefines();
 

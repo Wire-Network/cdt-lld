@@ -445,6 +445,13 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   // Add synthetic dummies for weak undefined functions.
   if (!Config->Relocatable)
     handleWeakUndefines();
+  
+  // Is the entry symbol found
+  for (ObjFile *File : Symtab->ObjectFiles)
+    for (Symbol *Sym : File->getSymbols()) {
+       if (toString(*Sym) == Config->Entry)
+          Symtab->EntryIsUndefined = false;
+     }
 
   // Do link-time optimization if given files are LLVM bitcode files.
   // This compiles bitcode files into real object files.
