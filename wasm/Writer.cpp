@@ -998,6 +998,7 @@ static constexpr int OPCODE_ELSE = 0x5;
 static constexpr int OPCODE_END  = 0xb;
 static constexpr int OPCODE_GET_LOCAL = 0x20;
 static constexpr int OPCODE_I64_EQ    = 0x51;
+static constexpr int OPCODE_I64_EQ    = 0x52;
 static constexpr int OPCODE_I32_CONST = 0x41;
 static constexpr int OPCODE_I64_CONST = 0x42;
 static constexpr int EOSIO_ERROR_NO_ACTION = 90000;
@@ -1113,6 +1114,12 @@ void Writer::createDispatchFunction() {
          }
          writeU8(OS, OPCODE_ELSE, "ELSE");
       }
+      writeU8(OS, OPCODE_GET_LOCAL, "GET_LOCAL");
+      writeUleb128(OS, 0, "self");
+      writeU8(OS, OPCODE_I64_CONST, "I64.CONST");
+      encodeSLEB128((int64_t)eosio::cdt::string_to_name("eosio"), OS);
+      writeU8(OS, OPCODE_I64_NEQ, "I64.NEQ");
+      writeU8(OS, OPCODE_IF, "if receiver == eosio");
       // assert that no action was found
       writeU8(OS, OPCODE_I32_CONST, "I32.CONST");
       writeUleb128(OS, 0, "false");
