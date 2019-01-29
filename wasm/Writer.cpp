@@ -297,7 +297,7 @@ void Writer::createExportSection() {
 
   SyntheticSection *Section = createSyntheticSection(WASM_SEC_EXPORT);
   raw_ostream &OS = Section->getStream();
-   
+
   std::vector<WasmExport> filtered_exports;
   for (auto ex : Exports) {
      if (Config->should_export(ex))
@@ -997,15 +997,16 @@ static constexpr int OPCODE_IF   = 0x4;
 static constexpr int OPCODE_ELSE = 0x5;
 static constexpr int OPCODE_END  = 0xb;
 static constexpr int OPCODE_GET_LOCAL = 0x20;
+static constexpr int OPCODE_I32_EQ    = 0x46;
 static constexpr int OPCODE_I64_EQ    = 0x51;
-static constexpr int OPCODE_I64_EQ    = 0x52;
+static constexpr int OPCODE_I64_NE    = 0x52;
 static constexpr int OPCODE_I32_CONST = 0x41;
 static constexpr int OPCODE_I64_CONST = 0x42;
 static constexpr int EOSIO_ERROR_NO_ACTION = 90000;
 static constexpr int EOSIO_ERROR_ONERROR   = 90001;
 
 void Writer::createDispatchFunction() {
-   
+
    auto get_function = [&](std::string func_name) -> int64_t {
       for (ObjFile *File : Symtab->ObjectFiles) {
          for (auto func : File->Functions) {
@@ -1047,7 +1048,7 @@ void Writer::createDispatchFunction() {
    {
       raw_string_ostream OS(BodyContent);
       writeUleb128(OS, 0, "num locals");
-      
+
       auto ctors_sym = (FunctionSymbol*)Symtab->find("__wasm_call_ctors");
       if (ctors_sym) {
          uint32_t ctors_idx = ctors_sym->getFunctionIndex();
@@ -1074,8 +1075,9 @@ void Writer::createDispatchFunction() {
                not_cnt++;
                std::string snotif = notif.str();
                size_t idx = snotif.find(":");
+               // <code_name>::<action>:<generated_notify_dispatch_func>
                auto code_name = snotif.substr(0, idx);
-               auto rest      = snotif.substr(idx+1);
+               auto rest      = snotif.substr(idx+2);
                notify_handlers[code_name].push_back(rest);
             }
          }
@@ -1118,8 +1120,9 @@ void Writer::createDispatchFunction() {
       writeUleb128(OS, 0, "self");
       writeU8(OS, OPCODE_I64_CONST, "I64.CONST");
       encodeSLEB128((int64_t)eosio::cdt::string_to_name("eosio"), OS);
-      writeU8(OS, OPCODE_I64_NEQ, "I64.NEQ");
-      writeU8(OS, OPCODE_IF, "if receiver == eosio");
+      writeU8(OS, OPCODE_I64_NE, "I64.NE");
+      writeU8(OS, OPCODE_IF, "if receiver != eosio");
+      writeU8(OS, 0x40, "none");
       // assert that no action was found
       writeU8(OS, OPCODE_I32_CONST, "I32.CONST");
       writeUleb128(OS, 0, "false");
@@ -1132,8 +1135,17 @@ void Writer::createDispatchFunction() {
       for (int i=0; i < act_cnt; i++) {
          writeU8(OS, OPCODE_END, "END");
       }
-      
+      writeU8(OS, OPCODE_END, "END");
+
       writeU8(OS, OPCODE_ELSE, "ELSE");
+
+      writeU8(OS, OPCODE_GET_LOCAL, "GET_LOCAL");
+      writeUleb128(OS, 0, "self");
+      writeU8(OS, OPCODE_I64_CONST, "I64.CONST");
+      encodeSLEB128((int64_t)eosio::cdt::string_to_name("eosio"), OS);
+      writeU8(OS, OPCODE_I64_NE, "I64.NE");
+      writeU8(OS, OPCODE_IF, "if receiver != eosio");
+      writeU8(OS, 0x40, "none");
 
       // assert on onerror
       writeU8(OS, OPCODE_I64_CONST, "I64.CONST");
@@ -1150,6 +1162,7 @@ void Writer::createDispatchFunction() {
       writeUleb128(OS, EOSIO_ERROR_ONERROR, "error code");
       writeU8(OS, OPCODE_CALL, "CALL");
       writeUleb128(OS, assert_idx, "code");
+      writeU8(OS, OPCODE_END, "END");
 
       // dispatch notification handlers
       writeU8(OS, OPCODE_ELSE, "ELSE");
