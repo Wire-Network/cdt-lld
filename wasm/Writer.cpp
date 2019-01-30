@@ -101,6 +101,8 @@ private:
   void writeHeader();
   void writeSections();
   void writeABI() {
+     if (abis.empty())
+        return;
      try {
         ABIMerger merger(ojson::parse(abis.back()));
         for (auto abi : abis) {
@@ -120,6 +122,8 @@ private:
         }
      } catch (std::runtime_error& err) {
         fatal(std::string(std::string("failed to write abi: ") + err.what()).c_str());
+     } catch (...) {
+        fatal("failed to write abi");
      }
   }
 

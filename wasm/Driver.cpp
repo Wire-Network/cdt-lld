@@ -499,11 +499,18 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
         return 2;
      return 3;
   };
+  auto get_first = [](std::string exp) {
+     return exp.substr(0, exp.find(":"));
+  };
+  auto get_second = [](std::string exp) {
+     return exp.substr(exp.find(":")+1);
+  };
+
   for (auto *Arg : Args.filtered(OPT_only_export)) {
-     char* name = strtok(const_cast<char*>(Arg->getValue()), ":");
-     if (name || name[0] == '*') {
-        char* type = strtok(NULL, ":");
-        WasmExport we = {name, get_kind(type), 0};
+     auto name  = get_first(const_cast<char*>(Arg->getValue()));
+     if (!name.empty()) {
+        auto type = get_second(const_cast<char*>(Arg->getValue()));
+        WasmExport we = {name.c_str(), get_kind(type.c_str()), 0};
         Config->exports.push_back(we);
      }
   }
@@ -517,5 +524,5 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   markLive();
 
   // Write the result to the file.
-  writeResult(EntrySym->isDefined());
+  writeResult(true);
 }
