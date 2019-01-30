@@ -52,7 +52,7 @@ void lld::wasm::markLive() {
   if (!Config->Entry.empty())
     Enqueue(Symtab->find(Config->Entry));
   Enqueue(WasmSym::CallCtors);
-   
+
   Enqueue(Symtab->find("__cxa_finalize"));
 
   // By default we export all non-hidden, so they are gc roots too
@@ -69,7 +69,7 @@ void lld::wasm::markLive() {
     for (const WasmInitFunc &F : L.InitFunctions)
       Enqueue(Obj->getFunctionSymbol(F.Symbol));
   }
-   
+
   // mark action dispatch stubs as live
   for (const ObjFile *Obj : Symtab->ObjectFiles) {
      auto wasm_obj = Obj->getWasmObj();
@@ -84,13 +84,13 @@ void lld::wasm::markLive() {
         }
      }
   }
-  
+
   // mark notify dispatch stubs as live
   for (const ObjFile *Obj : Symtab->ObjectFiles) {
      auto wasm_obj = Obj->getWasmObj();
      for (auto func : wasm_obj->functions()) {
         for (auto _not : wasm_obj->notify()) {
-            std::string sub = _not.substr(_not.find(":")+1);
+            std::string sub = _not.substr(_not.find(":")+2);
             if (func.SymbolName == sub.substr(sub.find(":")+1)) {
                Enqueue(Symtab->find(func.SymbolName));
             }
@@ -126,7 +126,7 @@ void lld::wasm::markLive() {
   }
 
   // Report garbage-collected sections.
-  if (true || Config->PrintGcSections) {
+  if (Config->PrintGcSections) {
     for (const ObjFile *Obj : Symtab->ObjectFiles) {
       for (InputChunk *C : Obj->Functions)
         if (!C->Live)

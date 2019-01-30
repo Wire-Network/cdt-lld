@@ -1044,30 +1044,68 @@ void Writer::createDispatchFunction() {
          throw std::runtime_error("wasm_ld internal error function not found");
    };
 
-   std::string BodyContent;
-   {
-      raw_string_ostream OS(BodyContent);
-      writeUleb128(OS, 0, "num locals");
+   auto assert_sym = (FunctionSymbol*)Symtab->find("eosio_assert_code");
+   uint32_t assert_idx = assert_sym->getFunctionIndex();
+   auto post_sym = (FunctionSymbol*)Symtab->find("post_dispatch");
 
-      auto ctors_sym = (FunctionSymbol*)Symtab->find("__wasm_call_ctors");
-      if (ctors_sym) {
-         uint32_t ctors_idx = ctors_sym->getFunctionIndex();
-         if (ctors_idx != 0) {
-            writeU8(OS, OPCODE_CALL, "CALL");
-            writeUleb128(OS, ctors_idx, "__wasm_call_ctors");
-         }
-      }
-
+   auto create_action_dispatch = [&](raw_string_ostream& OS) {
+      // count how many total actions we have
       int act_cnt = 0;
-      for (ObjFile *File : Symtab->ObjectFiles) {
-         if (!File->getEosioActions().empty()) {
-            for (auto act : File->getEosioActions()) {
-               act_cnt++;
+      for (ObjFile *File : Symtab->ObjectFiles)
+         act_cnt += File->getEosioActions().size();
+
+      // create the dispatching for the actions
+      if (act_cnt > 0) {
+         bool need_else = false;
+         for (ObjFile *File : Symtab->ObjectFiles) {
+            if (!File->getEosioActions().empty()) {
+               for (auto act : File->getEosioActions()) {
+                  create_if(OS, act.str(), need_else);
+               }
             }
          }
+         writeU8(OS, OPCODE_ELSE, "ELSE");
       }
-      int not_cnt = 0;
 
+      // do not fail if self == eosio
+      writeU8(OS, OPCODE_GET_LOCAL, "GET_LOCAL");
+      writeUleb128(OS, 0, "self");
+      writeU8(OS, OPCODE_I64_CONST, "I64.CONST");
+      encodeSLEB128((int64_t)eosio::cdt::string_to_name("eosio"), OS);
+      writeU8(OS, OPCODE_I64_NE, "I64.NE");
+      writeU8(OS, OPCODE_IF, "if receiver != eosio");
+      writeU8(OS, 0x40, "none");
+
+      // assert that no action was found
+      writeU8(OS, OPCODE_I32_CONST, "I32.CONST");
+      writeUleb128(OS, 0, "false");
+      writeU8(OS, OPCODE_I64_CONST, "I64.CONST");
+      writeUleb128(OS, EOSIO_ERROR_NO_ACTION, "error code");
+      writeU8(OS, OPCODE_CALL, "CALL");
+      writeUleb128(OS, assert_idx, "code");
+
+      if (post_sym) {
+         writeU8(OS, OPCODE_ELSE, "ELSE");
+         uint32_t post_idx  = post_sym->getFunctionIndex();
+         writeU8(OS, OPCODE_GET_LOCAL, "GET_LOCAL");
+         writeUleb128(OS, 0, "receiver");
+         writeU8(OS, OPCODE_GET_LOCAL, "GET_LOCAL");
+         writeUleb128(OS, 1, "code");
+         writeU8(OS, OPCODE_GET_LOCAL, "GET_LOCAL");
+         writeUleb128(OS, 2, "action");
+         writeU8(OS, OPCODE_CALL, "CALL");
+         writeUleb128(OS, post_idx, "post_dispatch call");
+      }
+      writeU8(OS, OPCODE_END, "END");
+
+      for (int i=0; i < act_cnt; i++) {
+         writeU8(OS, OPCODE_END, "END");
+      }
+   };
+
+   auto create_notify_dispatch = [&](raw_string_ostream& OS) {
+      // count how many total notify handlers we have and register them
+      int not_cnt = 0;
       std::map<std::string, std::vector<std::string>> notify_handlers;
       for (ObjFile *File : Symtab->ObjectFiles) {
          if (!File->getEosioNotify().empty()) {
@@ -1082,62 +1120,6 @@ void Writer::createDispatchFunction() {
             }
          }
       }
-
-      auto pre_sym = (FunctionSymbol*)Symtab->find("pre_dispatch");
-      if (pre_sym) {
-         uint32_t pre_idx  = pre_sym->getFunctionIndex();
-         writeU8(OS, OPCODE_GET_LOCAL, "GET_LOCAL");
-         writeUleb128(OS, 0, "receiver");
-         writeU8(OS, OPCODE_GET_LOCAL, "GET_LOCAL");
-         writeUleb128(OS, 1, "code");
-         writeU8(OS, OPCODE_GET_LOCAL, "GET_LOCAL");
-         writeUleb128(OS, 2, "action");
-         writeU8(OS, OPCODE_CALL, "CALL");
-         writeUleb128(OS, pre_idx, "pre_dispatch call");
-      }
-
-      writeU8(OS, OPCODE_GET_LOCAL, "GET_LOCAL");
-      writeUleb128(OS, 0, "receiver");
-      writeU8(OS, OPCODE_GET_LOCAL, "GET_LOCAL");
-      writeUleb128(OS, 1, "code");
-
-      writeU8(OS, OPCODE_I64_EQ, "I64.EQ");
-      writeU8(OS, OPCODE_IF, "IF code==receiver");
-      writeU8(OS, 0x40, "none");
-
-      if (act_cnt > 0) {
-         bool need_else = false;
-         for (ObjFile *File : Symtab->ObjectFiles) {
-            if (!File->getEosioActions().empty()) {
-               for (auto act : File->getEosioActions()) {
-                  create_if(OS, act.str(), need_else);
-               }
-            }
-         }
-         writeU8(OS, OPCODE_ELSE, "ELSE");
-      }
-      writeU8(OS, OPCODE_GET_LOCAL, "GET_LOCAL");
-      writeUleb128(OS, 0, "self");
-      writeU8(OS, OPCODE_I64_CONST, "I64.CONST");
-      encodeSLEB128((int64_t)eosio::cdt::string_to_name("eosio"), OS);
-      writeU8(OS, OPCODE_I64_NE, "I64.NE");
-      writeU8(OS, OPCODE_IF, "if receiver != eosio");
-      writeU8(OS, 0x40, "none");
-      // assert that no action was found
-      writeU8(OS, OPCODE_I32_CONST, "I32.CONST");
-      writeUleb128(OS, 0, "false");
-      writeU8(OS, OPCODE_I64_CONST, "I64.CONST");
-      writeUleb128(OS, EOSIO_ERROR_NO_ACTION, "error code");
-      auto assert_sym = (FunctionSymbol*)Symtab->find("eosio_assert_code");
-      uint32_t assert_idx = assert_sym->getFunctionIndex();
-      writeU8(OS, OPCODE_CALL, "CALL");
-      writeUleb128(OS, assert_idx, "code");
-      for (int i=0; i < act_cnt; i++) {
-         writeU8(OS, OPCODE_END, "END");
-      }
-      writeU8(OS, OPCODE_END, "END");
-
-      writeU8(OS, OPCODE_ELSE, "ELSE");
 
       writeU8(OS, OPCODE_GET_LOCAL, "GET_LOCAL");
       writeUleb128(OS, 0, "self");
@@ -1163,9 +1145,9 @@ void Writer::createDispatchFunction() {
       writeU8(OS, OPCODE_CALL, "CALL");
       writeUleb128(OS, assert_idx, "code");
       writeU8(OS, OPCODE_END, "END");
+      writeU8(OS, OPCODE_END, "END");
 
       // dispatch notification handlers
-      writeU8(OS, OPCODE_ELSE, "ELSE");
       bool notify0_need_else = false;
       if (not_cnt > 0) {
          for (auto const& notif0 : notify_handlers) {
@@ -1182,32 +1164,23 @@ void Writer::createDispatchFunction() {
             writeU8(OS, OPCODE_IF, "IF code==?");
             writeU8(OS, 0x40, "none");
             bool need_else = false;
-            for (auto const& notif1 : notif0.second) {
+            for (auto const& notif1 : notif0.second)
                create_if(OS, notif1, need_else);
-            }
-            for (int i=0; i < notif0.second.size(); i++) {
-               writeU8(OS, OPCODE_END, "END");
-            }
             notify0_need_else = true;
          }
+         writeU8(OS, OPCODE_END, "END");
          writeU8(OS, OPCODE_ELSE, "ELSE");
       }
+
       if (!notify_handlers["*"].empty()) {
          bool need_else = false;
          for (auto const& notif1 : notify_handlers["*"]) {
             create_if(OS, notif1, need_else);
          }
-         for (int i=0; i < notify_handlers["*"].size(); i++) {
-            writeU8(OS, OPCODE_END, "END");
-         }
       }
-      for (int i=0; i < notify_handlers.size(); i++)
-         writeU8(OS, OPCODE_END, "END");
-      //writeU8(OS, OPCODE_END, "END");
-      writeU8(OS, OPCODE_END, "END");
 
-      auto post_sym = (FunctionSymbol*)Symtab->find("post_dispatch");
       if (post_sym) {
+         writeU8(OS, OPCODE_ELSE, "ELSE");
          uint32_t post_idx  = post_sym->getFunctionIndex();
          writeU8(OS, OPCODE_GET_LOCAL, "GET_LOCAL");
          writeUleb128(OS, 0, "receiver");
@@ -1218,6 +1191,60 @@ void Writer::createDispatchFunction() {
          writeU8(OS, OPCODE_CALL, "CALL");
          writeUleb128(OS, post_idx, "post_dispatch call");
       }
+
+      for (int i=0; i < not_cnt; i++)
+        writeU8(OS, OPCODE_END, "END");
+   };
+
+   std::string BodyContent;
+   {
+      raw_string_ostream OS(BodyContent);
+      writeUleb128(OS, 0, "num locals");
+
+      // create ctors call
+      auto ctors_sym = (FunctionSymbol*)Symtab->find("__wasm_call_ctors");
+      if (ctors_sym) {
+         uint32_t ctors_idx = ctors_sym->getFunctionIndex();
+         if (ctors_idx != 0) {
+            writeU8(OS, OPCODE_CALL, "CALL");
+            writeUleb128(OS, ctors_idx, "__wasm_call_ctors");
+         }
+
+      }
+
+
+      // create the pre_dispatch function call
+      auto pre_sym = (FunctionSymbol*)Symtab->find("pre_dispatch");
+      if (pre_sym) {
+         uint32_t pre_idx  = pre_sym->getFunctionIndex();
+         writeU8(OS, OPCODE_GET_LOCAL, "GET_LOCAL");
+         writeUleb128(OS, 0, "receiver");
+         writeU8(OS, OPCODE_GET_LOCAL, "GET_LOCAL");
+         writeUleb128(OS, 1, "code");
+         writeU8(OS, OPCODE_GET_LOCAL, "GET_LOCAL");
+         writeUleb128(OS, 2, "action");
+         writeU8(OS, OPCODE_CALL, "CALL");
+         writeUleb128(OS, pre_idx, "pre_dispatch call");
+      }
+
+      // create the preamble for apply if (code == receiver)
+      writeU8(OS, OPCODE_GET_LOCAL, "GET_LOCAL");
+      writeUleb128(OS, 0, "receiver");
+      writeU8(OS, OPCODE_GET_LOCAL, "GET_LOCAL");
+      writeUleb128(OS, 1, "code");
+
+      writeU8(OS, OPCODE_I64_EQ, "I64.EQ");
+      writeU8(OS, OPCODE_IF, "IF code==receiver");
+      writeU8(OS, 0x40, "none");
+
+      create_action_dispatch(OS);
+
+      // now doing notification handling
+      writeU8(OS, OPCODE_ELSE, "ELSE");
+
+      create_notify_dispatch(OS);
+
+      writeU8(OS, OPCODE_END, "END");
 
       auto dtors_sym = (FunctionSymbol*)Symtab->find("__cxa_finalize");
       if (dtors_sym) {
