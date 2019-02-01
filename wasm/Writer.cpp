@@ -1055,21 +1055,22 @@ void Writer::createDispatchFunction() {
    auto create_action_dispatch = [&](raw_string_ostream& OS) {
       // count how many total actions we have
       int act_cnt = 0;
-      for (ObjFile *File : Symtab->ObjectFiles)
-         act_cnt += File->getEosioActions().size();
 
       // create the dispatching for the actions
-      if (act_cnt > 0) {
-         bool need_else = false;
-         for (ObjFile *File : Symtab->ObjectFiles) {
-            if (!File->getEosioActions().empty()) {
-               for (auto act : File->getEosioActions()) {
-                  create_if(OS, act.str(), need_else);
-               }
+      std::set<StringRef> has_dispatched;
+      bool need_else = false;
+      for (ObjFile *File : Symtab->ObjectFiles) {
+        if (!File->getEosioActions().empty()) {
+            for (auto act : File->getEosioActions()) {
+              if (has_dispatched.insert(act).second) {
+                create_if(OS, act.str(), need_else);
+                act_cnt++;
+              }
             }
-         }
-         writeU8(OS, OPCODE_ELSE, "ELSE");
+        }
       }
+      if (act_cnt > 0)
+        writeU8(OS, OPCODE_ELSE, "ELSE");
 
       // do not fail if self == eosio
       writeU8(OS, OPCODE_GET_LOCAL, "GET_LOCAL");
@@ -1110,17 +1111,20 @@ void Writer::createDispatchFunction() {
    auto create_notify_dispatch = [&](raw_string_ostream& OS) {
       // count how many total notify handlers we have and register them
       int not_cnt = 0;
+      std::set<StringRef> has_dispatched;
       std::map<std::string, std::vector<std::string>> notify_handlers;
       for (ObjFile *File : Symtab->ObjectFiles) {
          if (!File->getEosioNotify().empty()) {
             for (auto notif : File->getEosioNotify()) {
-               not_cnt++;
-               std::string snotif = notif.str();
-               size_t idx = snotif.find(":");
-               // <code_name>::<action>:<generated_notify_dispatch_func>
-               auto code_name = snotif.substr(0, idx);
-               auto rest      = snotif.substr(idx+2);
-               notify_handlers[code_name].push_back(rest);
+              if (has_dispatched.insert(notif).second) {
+                not_cnt++;
+                std::string snotif = notif.str();
+                size_t idx = snotif.find(":");
+                // <code_name>::<action>:<generated_notify_dispatch_func>
+                auto code_name = snotif.substr(0, idx);
+                auto rest      = snotif.substr(idx+2);
+                notify_handlers[code_name].push_back(rest);
+              }
             }
          }
       }
