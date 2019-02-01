@@ -108,8 +108,10 @@ private:
         for (auto abi : abis) {
            merger.set_abi(merger.merge(ojson::parse(abi)));
         }
+        SmallString<64> output_file = Config->OutputFile;
+        llvm::sys::path::replace_extension(output_file, ".abi");
         Expected<std::unique_ptr<FileOutputBuffer>> BufferOrErr =
-            FileOutputBuffer::create((llvm::sys::path::stem(Config->OutputFile)+".abi").str(), merger.get_abi_string().size());
+          FileOutputBuffer::create(output_file, merger.get_abi_string().size());
 
         if (!BufferOrErr)
           error("failed to open " + Config->OutputFile + ": " +
