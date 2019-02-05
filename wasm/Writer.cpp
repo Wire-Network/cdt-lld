@@ -1008,8 +1008,9 @@ static constexpr int OPCODE_I64_EQ    = 0x51;
 static constexpr int OPCODE_I64_NE    = 0x52;
 static constexpr int OPCODE_I32_CONST = 0x41;
 static constexpr int OPCODE_I64_CONST = 0x42;
-static constexpr int EOSIO_ERROR_NO_ACTION = 90000;
-static constexpr int EOSIO_ERROR_ONERROR   = 90001;
+static constexpr uint64_t EOSIO_COMPILER_ERROR_BASE = 8000000000000000000ull;
+static constexpr uint64_t EOSIO_ERROR_NO_ACTION     = EOSIO_COMPILER_ERROR_BASE;
+static constexpr uint64_t EOSIO_ERROR_ONERROR       = EOSIO_COMPILER_ERROR_BASE+1;
 
 void Writer::createDispatchFunction() {
 
@@ -1138,24 +1139,47 @@ void Writer::createDispatchFunction() {
       writeU8(OS, OPCODE_I64_NE, "I64.NE");
       writeU8(OS, OPCODE_IF, "if receiver != eosio");
       writeU8(OS, 0x40, "none");
+      
+      // check for onerror first
+      bool has_onerror_handler = false;
+      if (not_cnt > 0) {
+         for (auto const& notif0 : notify_handlers) {
+            uint64_t nm = eosio::cdt::string_to_name(notif0.first.c_str());
+            if (notif0.first == "eosio")
+               for (auto const& notif1 : notif0.second)
+                  if (notif1 == "onerror")
+                     has_onerror_handler = true;
+         }
+      }
 
-      // assert on onerror
-      writeU8(OS, OPCODE_I64_CONST, "I64.CONST");
-      uint64_t nm = eosio::cdt::string_to_name("onerror");
-      encodeSLEB128((int64_t)nm, OS);
-      writeU8(OS, OPCODE_GET_LOCAL, "GET_LOCAL");
-      writeUleb128(OS, 2, "action");
-      writeU8(OS, OPCODE_I64_EQ, "I64.EQ");
-      writeU8(OS, OPCODE_IF, "IF action==onerror");
-      writeU8(OS, 0x40, "none");
-      writeU8(OS, OPCODE_I32_CONST, "I32.CONST");
-      writeUleb128(OS, 0, "false");
-      writeU8(OS, OPCODE_I64_CONST, "I64.CONST");
-      writeUleb128(OS, EOSIO_ERROR_ONERROR, "error code");
-      writeU8(OS, OPCODE_CALL, "CALL");
-      writeUleb128(OS, assert_idx, "code");
-      writeU8(OS, OPCODE_END, "END");
-      writeU8(OS, OPCODE_END, "END");
+      if (!has_onerror_handler) {
+         // assert on onerror
+         writeU8(OS, OPCODE_I64_CONST, "I64.CONST");
+         uint64_t acnt = eosio::cdt::string_to_name("eosio");
+         encodeSLEB128((int64_t)acnt, OS);
+         writeU8(OS, OPCODE_GET_LOCAL, "GET_LOCAL");
+         writeUleb128(OS, 1, "code");
+         writeU8(OS, OPCODE_I64_EQ, "I64.EQ");
+         writeU8(OS, OPCODE_IF, "IF code == eosio");
+         writeU8(OS, 0x40, "none");
+
+         writeU8(OS, OPCODE_I64_CONST, "I64.CONST");
+         uint64_t nm = eosio::cdt::string_to_name("onerror");
+         encodeSLEB128((int64_t)nm, OS);
+         writeU8(OS, OPCODE_GET_LOCAL, "GET_LOCAL");
+         writeUleb128(OS, 2, "action");
+         writeU8(OS, OPCODE_I64_EQ, "I64.EQ");
+         writeU8(OS, OPCODE_IF, "IF action==onerror");
+         writeU8(OS, 0x40, "none");
+         writeU8(OS, OPCODE_I32_CONST, "I32.CONST");
+         writeUleb128(OS, 0, "false");
+         writeU8(OS, OPCODE_I64_CONST, "I64.CONST");
+         writeUleb128(OS, EOSIO_ERROR_ONERROR, "error code");
+         writeU8(OS, OPCODE_CALL, "CALL");
+         writeUleb128(OS, assert_idx, "code");
+         writeU8(OS, OPCODE_END, "END");
+         writeU8(OS, OPCODE_END, "END");
+      }
 
       // dispatch notification handlers
       bool notify0_need_else = false;
@@ -1235,6 +1259,8 @@ void Writer::createDispatchFunction() {
          writeUleb128(OS, 2, "action");
          writeU8(OS, OPCODE_CALL, "CALL");
          writeUleb128(OS, pre_idx, "pre_dispatch call");
+         writeU8(OS, OPCODE_IF, "IF pre_dispatch -> T");
+         writeU8(OS, 0x40, "none");
       }
 
       // create the preamble for apply if (code == receiver)
@@ -1266,7 +1292,8 @@ void Writer::createDispatchFunction() {
             writeUleb128(OS, dtors_idx, "__cxa_finalize");
          }
       }
-
+      if (pre_sym)
+         writeU8(OS, OPCODE_END, "END");
       writeU8(OS, OPCODE_END, "END");
    }
 
