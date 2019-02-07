@@ -124,8 +124,8 @@ private:
         }
      } catch (std::runtime_error& err) {
         fatal(std::string(std::string("failed to write abi: ") + err.what()).c_str());
-     } catch (...) {
-        fatal("failed to write abi");
+     } catch (jsoncons::json_exception& ex) {
+        fatal(std::string(std::string("failed to write abi") + ex.what()).c_str());
      }
   }
 
