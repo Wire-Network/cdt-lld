@@ -12,6 +12,7 @@
 #include "InputChunks.h"
 #include "InputGlobal.h"
 #include "SymbolTable.h"
+
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Memory.h"
 #include "llvm/Object/Binary.h"
@@ -177,6 +178,10 @@ void ObjFile::parse() {
       TableEntries[FunctionIndex] = Offset + Index;
     }
   }
+  
+  eosio_abi     = WasmObj->get_eosio_abi();
+  eosio_actions = WasmObj->actions();
+  eosio_notify  = WasmObj->notify();
 
   // Find the code and data sections.  Wasm objects can have at most one code
   // and one data section.

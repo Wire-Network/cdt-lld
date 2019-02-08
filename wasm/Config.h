@@ -53,6 +53,7 @@ struct Configuration {
   unsigned ThinLTOJobs;
   llvm::StringRef Entry;
   llvm::StringRef OutputFile;
+  llvm::StringRef ABIOutputFile;
   llvm::StringRef ThinLTOCacheDir;
   std::vector<llvm::wasm::WasmExport> exports;  
   llvm::StringSet<> AllowUndefinedSymbols;

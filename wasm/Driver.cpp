@@ -405,6 +405,12 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
     WasmSym::CallCtors = Symtab->addSyntheticFunction(
         "__wasm_call_ctors", WASM_SYMBOL_VISIBILITY_HIDDEN,
         make<SyntheticFunction>(NullSignature, "__wasm_call_ctors"));
+
+    static WasmSignature EntrySignature = {{WASM_TYPE_I64, WASM_TYPE_I64, WASM_TYPE_I64}, WASM_TYPE_NORESULT};
+    WasmSym::EntryFunc = Symtab->addSyntheticFunction(
+         Config->Entry, WASM_SYMBOL_VISIBILITY_DEFAULT | WASM_SYMBOL_BINDING_WEAK,
+         make<SyntheticFunction>(EntrySignature, Config->Entry));
+
     // TODO(sbc): Remove WASM_SYMBOL_VISIBILITY_HIDDEN when the mutable global
     // spec proposal is implemented in all major browsers.
     // See: https://github.com/WebAssembly/mutable-global
@@ -439,6 +445,13 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   // Add synthetic dummies for weak undefined functions.
   if (!Config->Relocatable)
     handleWeakUndefines();
+  
+  // Is the entry symbol found
+  for (ObjFile *File : Symtab->ObjectFiles)
+    for (Symbol *Sym : File->getSymbols()) {
+       if (toString(*Sym) == Config->Entry)
+          Symtab->EntryIsUndefined = false;
+     }
 
   // Do link-time optimization if given files are LLVM bitcode files.
   // This compiles bitcode files into real object files.
@@ -461,7 +474,7 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
         error("symbol forced with --undefined not found: " + Sym->getName());
     }
     if (EntrySym && !EntrySym->isDefined())
-      error("entry symbol not defined (pass --no-entry to supress): " +
+       error("entry symbol not defined (pass --no-entry to supress): " +
             EntrySym->getName());
   }
   if (errorCount())
@@ -486,11 +499,18 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
         return 2;
      return 3;
   };
+  auto get_first = [](std::string exp) {
+     return exp.substr(0, exp.find(":"));
+  };
+  auto get_second = [](std::string exp) {
+     return exp.substr(exp.find(":")+1);
+  };
+
   for (auto *Arg : Args.filtered(OPT_only_export)) {
-     char* name = strtok(const_cast<char*>(Arg->getValue()), ":");
-     if (name || name[0] == '*') {
-        char* type = strtok(NULL, ":");
-        WasmExport we = {name, get_kind(type), 0};
+     auto name  = get_first(const_cast<char*>(Arg->getValue()));
+     if (!name.empty()) {
+        auto type = get_second(const_cast<char*>(Arg->getValue()));
+        WasmExport we = {name.c_str(), get_kind(type.c_str()), 0};
         Config->exports.push_back(we);
      }
   }
@@ -504,5 +524,5 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   markLive();
 
   // Write the result to the file.
-  writeResult();
+  writeResult(true);
 }

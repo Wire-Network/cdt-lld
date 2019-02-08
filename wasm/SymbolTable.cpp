@@ -83,8 +83,10 @@ void SymbolTable::reportRemainingUndefines() {
      }
 
   for (Symbol *Sym : Undefs)
-    if (!Sym->getFile())
-      error("undefined symbol: " + toString(*Sym));
+    if (!Sym->getFile()) {
+      if (toString(*Sym) != Config->Entry)
+         error("undefined symbol: " + toString(*Sym));
+    }
 }
 
 Symbol *SymbolTable::find(StringRef Name) {
@@ -196,7 +198,7 @@ static bool shouldReplace(const Symbol *Existing, InputFile *NewFile,
     return true;
   }
 
-  // Neither symbol is week. They conflict.
+  // Neither symbol is weak. They conflict.
   error("duplicate symbol: " + toString(*Existing) + "\n>>> defined in " +
         toString(Existing->getFile()) + "\n>>> defined in " +
         toString(NewFile));

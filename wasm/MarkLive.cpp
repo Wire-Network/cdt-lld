@@ -53,10 +53,13 @@ void lld::wasm::markLive() {
     Enqueue(Symtab->find(Config->Entry));
   Enqueue(WasmSym::CallCtors);
 
+  Enqueue(Symtab->find("__cxa_finalize"));
+
   // By default we export all non-hidden, so they are gc roots too
-  for (Symbol *Sym : Symtab->getSymbols())
+  for (Symbol *Sym : Symtab->getSymbols()) {
     if (!Sym->isHidden())
       Enqueue(Sym);
+  }
 
   // The ctor functions are all used in the synthetic __wasm_call_ctors
   // function, but since this function is created in-place it doesn't contain
@@ -65,6 +68,34 @@ void lld::wasm::markLive() {
     const WasmLinkingData &L = Obj->getWasmObj()->linkingData();
     for (const WasmInitFunc &F : L.InitFunctions)
       Enqueue(Obj->getFunctionSymbol(F.Symbol));
+  }
+
+  // mark action dispatch stubs as live
+  for (const ObjFile *Obj : Symtab->ObjectFiles) {
+     auto wasm_obj = Obj->getWasmObj();
+     for (auto func : wasm_obj->functions()) {
+        for (auto act : wasm_obj->actions()) {
+            if (func.SymbolName == act.substr(act.find(":")+1)) {
+               Enqueue(Symtab->find(func.SymbolName));
+            }
+            if (func.SymbolName == "pre_dispatch" || func.SymbolName == "post_dispatch" || func.SymbolName == "eosio_assert_code" ) {
+               Enqueue(Symtab->find(func.SymbolName));
+            }
+        }
+     }
+  }
+
+  // mark notify dispatch stubs as live
+  for (const ObjFile *Obj : Symtab->ObjectFiles) {
+     auto wasm_obj = Obj->getWasmObj();
+     for (auto func : wasm_obj->functions()) {
+        for (auto _not : wasm_obj->notify()) {
+            std::string sub = _not.substr(_not.find(":")+2);
+            if (func.SymbolName == sub.substr(sub.find(":")+1)) {
+               Enqueue(Symtab->find(func.SymbolName));
+            }
+        }
+     }
   }
 
   // Follow relocations to mark all reachable chunks.
