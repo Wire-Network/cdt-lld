@@ -1003,7 +1003,6 @@ static constexpr int OPCODE_IF   = 0x4;
 static constexpr int OPCODE_ELSE = 0x5;
 static constexpr int OPCODE_END  = 0xb;
 static constexpr int OPCODE_GET_LOCAL = 0x20;
-static constexpr int OPCODE_I32_EQ    = 0x46;
 static constexpr int OPCODE_I64_EQ    = 0x51;
 static constexpr int OPCODE_I64_NE    = 0x52;
 static constexpr int OPCODE_I32_CONST = 0x41;
@@ -1013,17 +1012,6 @@ static constexpr uint64_t EOSIO_ERROR_NO_ACTION     = EOSIO_COMPILER_ERROR_BASE;
 static constexpr uint64_t EOSIO_ERROR_ONERROR       = EOSIO_COMPILER_ERROR_BASE+1;
 
 void Writer::createDispatchFunction() {
-
-   auto get_function = [&](std::string func_name) -> int64_t {
-      for (ObjFile *File : Symtab->ObjectFiles) {
-         for (auto func : File->Functions) {
-            if (func->getName().str() == func_name) {
-               return func->getFunctionIndex();
-            }
-         }
-      }
-      return -1;
-   };
 
    auto create_if = [&](raw_string_ostream& os, std::string str, bool& need_else) {
       if (need_else) {
@@ -1088,7 +1076,7 @@ void Writer::createDispatchFunction() {
       writeU8(OS, OPCODE_I32_CONST, "I32.CONST");
       writeUleb128(OS, 0, "false");
       writeU8(OS, OPCODE_I64_CONST, "I64.CONST");
-      writeUleb128(OS, EOSIO_ERROR_NO_ACTION, "error code");
+      encodeSLEB128((int64_t)EOSIO_ERROR_NO_ACTION, OS);
       writeU8(OS, OPCODE_CALL, "CALL");
       writeUleb128(OS, assert_idx, "code");
 
@@ -1144,11 +1132,12 @@ void Writer::createDispatchFunction() {
       bool has_onerror_handler = false;
       if (not_cnt > 0) {
          for (auto const& notif0 : notify_handlers) {
-            uint64_t nm = eosio::cdt::string_to_name(notif0.first.c_str());
             if (notif0.first == "eosio")
                for (auto const& notif1 : notif0.second)
-                  if (notif1 == "onerror")
+                  if (notif1 == "onerror") {
                      has_onerror_handler = true;
+                     break;
+                  }
          }
       }
 
@@ -1174,7 +1163,7 @@ void Writer::createDispatchFunction() {
          writeU8(OS, OPCODE_I32_CONST, "I32.CONST");
          writeUleb128(OS, 0, "false");
          writeU8(OS, OPCODE_I64_CONST, "I64.CONST");
-         writeUleb128(OS, EOSIO_ERROR_ONERROR, "error code");
+         encodeSLEB128((int64_t)EOSIO_ERROR_ONERROR, OS);
          writeU8(OS, OPCODE_CALL, "CALL");
          writeUleb128(OS, assert_idx, "code");
          writeU8(OS, OPCODE_END, "END");
