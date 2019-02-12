@@ -1132,12 +1132,14 @@ void Writer::createDispatchFunction() {
       bool has_onerror_handler = false;
       if (not_cnt > 0) {
          for (auto const& notif0 : notify_handlers) {
-            if (notif0.first == "eosio")
-               for (auto const& notif1 : notif0.second)
-                  if (notif1 == "onerror") {
+            if (notif0.first == "eosio") {
+               for (auto const& notif1 : notif0.second) {
+                  llvm::outs() << "notif1 " << notif1.substr(0, notif1.find(":")) << "\n";
+                  if (notif1.substr(0, notif1.find(":")) == "onerror") {
                      has_onerror_handler = true;
-                     break;
                   }
+               }
+            }
          }
       }
 
