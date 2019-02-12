@@ -1124,7 +1124,7 @@ void Writer::createDispatchFunction() {
       bool has_onerror_handler = false;
       if (not_cnt > 0) {
          for (auto const& notif0 : notify_handlers) {
-            if (notif0.first == "*") {
+            if (notif0.first == "eosio") {
                for (auto const& notif1 : notif0.second) {
                   if (notif1.substr(0, notif1.find(":")) == "onerror") {
                      has_onerror_handler = true;
@@ -1136,6 +1136,14 @@ void Writer::createDispatchFunction() {
 
       if (!has_onerror_handler) {
          // assert on onerror
+         writeU8(OS, OPCODE_I64_CONST, "I64.CONST");
+         uint64_t acnt = eosio::cdt::string_to_name("eosio");
+         encodeSLEB128((int64_t)acnt, OS);
+         writeU8(OS, OPCODE_GET_LOCAL, "GET_LOCAL");
+         writeUleb128(OS, 1, "code");
+         writeU8(OS, OPCODE_I64_EQ, "I64.EQ");
+         writeU8(OS, OPCODE_IF, "IF code==eosio");
+         writeU8(OS, 0x40, "none");
          writeU8(OS, OPCODE_I64_CONST, "I64.CONST");
          uint64_t nm = eosio::cdt::string_to_name("onerror");
          encodeSLEB128((int64_t)nm, OS);
@@ -1150,6 +1158,7 @@ void Writer::createDispatchFunction() {
          encodeSLEB128((int64_t)EOSIO_ERROR_ONERROR, OS);
          writeU8(OS, OPCODE_CALL, "CALL");
          writeUleb128(OS, assert_idx, "code");
+         writeU8(OS, OPCODE_END, "END");
          writeU8(OS, OPCODE_END, "END");
       }
 
@@ -1172,9 +1181,10 @@ void Writer::createDispatchFunction() {
             bool need_else = false;
             for (auto const& notif1 : notif0.second)
                create_if(OS, notif1, need_else);
+            for (auto const& notif1 : notif0.second)
+               writeU8(OS, OPCODE_END, "END");
             notify0_need_else = true;
          }
-         writeU8(OS, OPCODE_END, "END");
          writeU8(OS, OPCODE_ELSE, "ELSE");
       }
 
@@ -1196,9 +1206,10 @@ void Writer::createDispatchFunction() {
          writeUleb128(OS, 2, "action");
          writeU8(OS, OPCODE_CALL, "CALL");
          writeUleb128(OS, post_idx, "post_dispatch call");
+         writeU8(OS, OPCODE_END, "END");
       }
 
-      for (int i=0; i < not_cnt; i++)
+      for (int i=0; i < notify_handlers["*"].size(); i++)
         writeU8(OS, OPCODE_END, "END");
    };
 
