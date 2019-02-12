@@ -1119,22 +1119,13 @@ void Writer::createDispatchFunction() {
             }
          }
       }
-
-      writeU8(OS, OPCODE_GET_LOCAL, "GET_LOCAL");
-      writeUleb128(OS, 0, "self");
-      writeU8(OS, OPCODE_I64_CONST, "I64.CONST");
-      encodeSLEB128((int64_t)eosio::cdt::string_to_name("eosio"), OS);
-      writeU8(OS, OPCODE_I64_NE, "I64.NE");
-      writeU8(OS, OPCODE_IF, "if receiver != eosio");
-      writeU8(OS, 0x40, "none");
       
       // check for onerror first
       bool has_onerror_handler = false;
       if (not_cnt > 0) {
          for (auto const& notif0 : notify_handlers) {
-            if (notif0.first == "eosio") {
+            if (notif0.first == "*") {
                for (auto const& notif1 : notif0.second) {
-                  llvm::outs() << "notif1 " << notif1.substr(0, notif1.find(":")) << "\n";
                   if (notif1.substr(0, notif1.find(":")) == "onerror") {
                      has_onerror_handler = true;
                   }
@@ -1145,15 +1136,6 @@ void Writer::createDispatchFunction() {
 
       if (!has_onerror_handler) {
          // assert on onerror
-         writeU8(OS, OPCODE_I64_CONST, "I64.CONST");
-         uint64_t acnt = eosio::cdt::string_to_name("eosio");
-         encodeSLEB128((int64_t)acnt, OS);
-         writeU8(OS, OPCODE_GET_LOCAL, "GET_LOCAL");
-         writeUleb128(OS, 1, "code");
-         writeU8(OS, OPCODE_I64_EQ, "I64.EQ");
-         writeU8(OS, OPCODE_IF, "IF code == eosio");
-         writeU8(OS, 0x40, "none");
-
          writeU8(OS, OPCODE_I64_CONST, "I64.CONST");
          uint64_t nm = eosio::cdt::string_to_name("onerror");
          encodeSLEB128((int64_t)nm, OS);
@@ -1168,7 +1150,6 @@ void Writer::createDispatchFunction() {
          encodeSLEB128((int64_t)EOSIO_ERROR_ONERROR, OS);
          writeU8(OS, OPCODE_CALL, "CALL");
          writeUleb128(OS, assert_idx, "code");
-         writeU8(OS, OPCODE_END, "END");
          writeU8(OS, OPCODE_END, "END");
       }
 
