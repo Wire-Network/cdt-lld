@@ -1040,7 +1040,9 @@ void Writer::createDispatchFunction() {
    };
 
    auto assert_sym = (FunctionSymbol*)Symtab->find("eosio_assert_code");
-   uint32_t assert_idx = assert_sym->getFunctionIndex();
+   int64_t assert_idx = -1;
+   if (assert_sym)
+     assert_idx = assert_sym->getFunctionIndex();
    auto post_sym = (FunctionSymbol*)Symtab->find("post_dispatch");
 
    auto create_action_dispatch = [&](raw_string_ostream& OS) {
@@ -1072,14 +1074,15 @@ void Writer::createDispatchFunction() {
       writeU8(OS, OPCODE_IF, "if receiver != eosio");
       writeU8(OS, 0x40, "none");
 
-      // assert that no action was found
-      writeU8(OS, OPCODE_I32_CONST, "I32.CONST");
-      writeUleb128(OS, 0, "false");
-      writeU8(OS, OPCODE_I64_CONST, "I64.CONST");
-      encodeSLEB128((int64_t)EOSIO_ERROR_NO_ACTION, OS);
-      writeU8(OS, OPCODE_CALL, "CALL");
-      writeUleb128(OS, assert_idx, "code");
-
+      if (assert_idx != -1) {
+        // assert that no action was found
+        writeU8(OS, OPCODE_I32_CONST, "I32.CONST");
+        writeUleb128(OS, 0, "false");
+        writeU8(OS, OPCODE_I64_CONST, "I64.CONST");
+        encodeSLEB128((int64_t)EOSIO_ERROR_NO_ACTION, OS);
+        writeU8(OS, OPCODE_CALL, "CALL");
+        writeUleb128(OS, assert_idx, "code");
+      }
       if (post_sym) {
          writeU8(OS, OPCODE_ELSE, "ELSE");
          uint32_t post_idx  = post_sym->getFunctionIndex();
