@@ -1081,7 +1081,7 @@ void Writer::createDispatchFunction() {
         writeU8(OS, OPCODE_I64_CONST, "I64.CONST");
         encodeSLEB128((int64_t)EOSIO_ERROR_NO_ACTION, OS);
         writeU8(OS, OPCODE_CALL, "CALL");
-        writeUleb128(OS, *(uint32_t*)&assert_idx, "code");
+        writeUleb128(OS, assert_idx, "code");
       } else {
          fatal("fatal failure: contract with no actions and trying to create dispatcher"); 
       }
@@ -1162,7 +1162,7 @@ void Writer::createDispatchFunction() {
          writeU8(OS, OPCODE_I64_CONST, "I64.CONST");
          encodeSLEB128((int64_t)EOSIO_ERROR_ONERROR, OS);
          writeU8(OS, OPCODE_CALL, "CALL");
-         writeUleb128(OS, *(uint32_t*)&assert_idx, "code");
+         writeUleb128(OS, assert_idx, "code");
          writeU8(OS, OPCODE_END, "END");
          writeU8(OS, OPCODE_END, "END");
       }
