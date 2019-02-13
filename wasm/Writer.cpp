@@ -1040,7 +1040,7 @@ void Writer::createDispatchFunction() {
    };
 
    auto assert_sym = (FunctionSymbol*)Symtab->find("eosio_assert_code");
-   int64_t assert_idx = -1;
+   uint32_t assert_idx = UINT32_MAX;
    if (assert_sym)
      assert_idx = assert_sym->getFunctionIndex();
    auto post_sym = (FunctionSymbol*)Symtab->find("post_dispatch");
@@ -1074,14 +1074,16 @@ void Writer::createDispatchFunction() {
       writeU8(OS, OPCODE_IF, "if receiver != eosio");
       writeU8(OS, 0x40, "none");
 
-      if (assert_idx != -1) {
+      if (assert_sym && assert_idx < Symtab->getSymbols().size()) {
         // assert that no action was found
         writeU8(OS, OPCODE_I32_CONST, "I32.CONST");
         writeUleb128(OS, 0, "false");
         writeU8(OS, OPCODE_I64_CONST, "I64.CONST");
         encodeSLEB128((int64_t)EOSIO_ERROR_NO_ACTION, OS);
         writeU8(OS, OPCODE_CALL, "CALL");
-        writeUleb128(OS, assert_idx, "code");
+        writeUleb128(OS, *(uint32_t*)&assert_idx, "code");
+      } else {
+         fatal("fatal failure: contract with no actions and trying to create dispatcher"); 
       }
       if (post_sym) {
          writeU8(OS, OPCODE_ELSE, "ELSE");
@@ -1160,7 +1162,7 @@ void Writer::createDispatchFunction() {
          writeU8(OS, OPCODE_I64_CONST, "I64.CONST");
          encodeSLEB128((int64_t)EOSIO_ERROR_ONERROR, OS);
          writeU8(OS, OPCODE_CALL, "CALL");
-         writeUleb128(OS, assert_idx, "code");
+         writeUleb128(OS, *(uint32_t*)&assert_idx, "code");
          writeU8(OS, OPCODE_END, "END");
          writeU8(OS, OPCODE_END, "END");
       }
@@ -1271,7 +1273,7 @@ void Writer::createDispatchFunction() {
       auto dtors_sym = (FunctionSymbol*)Symtab->find("__cxa_finalize");
       if (dtors_sym) {
          uint32_t dtors_idx = dtors_sym->getFunctionIndex();
-         if (dtors_idx != 0) {
+         if (dtors_idx != 0 && dtors_idx < Symtab->getSymbols().size()) {
             writeU8(OS, OPCODE_I32_CONST, "I32.CONST");
             writeUleb128(OS, (uint32_t)0, "NULL");
             writeU8(OS, OPCODE_CALL, "CALL");
@@ -1292,7 +1294,7 @@ void Writer::createDispatchFunction() {
 
    ArrayRef<uint8_t> Body = toArrayRef(Saver.save(FunctionBody));
    cast<SyntheticFunction>(WasmSym::EntryFunc->Function)->setBody(Body);
-}
+};
 
 // Create synthetic "__wasm_call_ctors" function based on ctor functions
 // in input object.
