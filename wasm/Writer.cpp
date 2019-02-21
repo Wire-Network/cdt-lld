@@ -125,7 +125,7 @@ private:
      } catch (std::runtime_error& err) {
         fatal(std::string(std::string("failed to write abi: ") + err.what()).c_str());
      } catch (jsoncons::json_exception& ex) {
-        fatal(std::string(std::string("failed to write abi") + ex.what()).c_str());
+        log("failed to write ABI");
      }
   }
 
@@ -1186,7 +1186,7 @@ void Writer::createDispatchFunction() {
             bool need_else = false;
             for (auto const& notif1 : notif0.second)
                create_if(OS, notif1, need_else);
-            for (auto const& notif1 : notif0.second)
+            for (int i=0; i < notif0.second.size(); i++)
                writeU8(OS, OPCODE_END, "END");
             notify0_need_else = true;
          }
