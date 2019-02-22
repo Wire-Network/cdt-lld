@@ -457,7 +457,9 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
        if (toString(*Sym) == Config->Entry)
           Symtab->EntryIsUndefined = false;
      }
-
+   
+   if (Config->OtherModel && Symtab->EntryIsUndefined)
+      error("entry symbol ("+Config->Entry+") is not defined");
   // Do link-time optimization if given files are LLVM bitcode files.
   // This compiles bitcode files into real object files.
   Symtab->addCombinedLTOObject();
