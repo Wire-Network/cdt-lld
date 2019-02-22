@@ -303,7 +303,7 @@ void Writer::createExportSection() {
 
   SyntheticSection *Section = createSyntheticSection(WASM_SEC_EXPORT);
   raw_ostream &OS = Section->getStream();
-
+   
   std::vector<WasmExport> filtered_exports;
   for (auto ex : Exports) {
      if (Config->should_export(ex))
