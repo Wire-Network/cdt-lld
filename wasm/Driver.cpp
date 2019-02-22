@@ -326,6 +326,7 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
       Args.hasFlag(OPT_fatal_warnings, OPT_no_fatal_warnings, false);
   Config->ImportMemory = Args.hasArg(OPT_import_memory);
   Config->ImportTable = Args.hasArg(OPT_import_table);
+  Config->OtherModel = Args.hasArg(OPT_other_model);
   Config->LTOO = args::getInteger(Args, OPT_lto_O, 2);
   Config->LTOPartitions = args::getInteger(Args, OPT_lto_partitions, 1);
   Config->Optimize = args::getInteger(Args, OPT_O, 0);
@@ -405,8 +406,12 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
     WasmSym::CallCtors = Symtab->addSyntheticFunction(
         "__wasm_call_ctors", WASM_SYMBOL_VISIBILITY_HIDDEN,
         make<SyntheticFunction>(NullSignature, "__wasm_call_ctors"));
-
-    static WasmSignature EntrySignature = {{WASM_TYPE_I64, WASM_TYPE_I64, WASM_TYPE_I64}, WASM_TYPE_NORESULT};
+      
+    static WasmSignature EntrySignature;
+    if (Config->OtherModel)
+       EntrySignature = {{WASM_TYPE_I64, WASM_TYPE_I64, WASM_TYPE_I64}, WASM_TYPE_NORESULT};
+    else
+       EntrySignature = {{}, WASM_TYPE_NORESULT};
     WasmSym::EntryFunc = Symtab->addSyntheticFunction(
          Config->Entry, WASM_SYMBOL_VISIBILITY_DEFAULT | WASM_SYMBOL_BINDING_WEAK,
          make<SyntheticFunction>(EntrySignature, Config->Entry));
@@ -486,8 +491,8 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
     Symbol *Sym = Symtab->find(Name);
     if (Sym && Sym->isDefined())
       Sym->setHidden(false);
-    else if (!Config->AllowUndefined)
-      error("symbol exported via --export not found: " + Name);
+    //else if (!Config->AllowUndefined)
+    //  error("symbol exported via --export not found: " + Name);
   }
   
   auto get_kind = [](const char* str) -> uint8_t {
