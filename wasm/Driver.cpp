@@ -506,6 +506,7 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
         return 2;
      return 3;
   };
+
   auto get_first = [](std::string exp) {
      return exp.substr(0, exp.find(":"));
   };
@@ -513,11 +514,16 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
      return exp.substr(exp.find(":")+1);
   };
 
+  // keep string optimizations from occurring
+  std::vector<char*> export_strs;
   for (auto *Arg : Args.filtered(OPT_only_export)) {
-     auto name  = get_first(const_cast<char*>(Arg->getValue()));
+     auto name  = get_first(std::string(Arg->getValue()));
+     char* cname = new char[name.size()];
+     memcpy(cname, name.c_str(), name.size());
+     export_strs.push_back(cname);
      if (!name.empty()) {
-        auto type = get_second(const_cast<char*>(Arg->getValue()));
-        WasmExport we = {name.c_str(), get_kind(type.c_str()), 0};
+        auto type = get_second(std::string(Arg->getValue()));
+        WasmExport we = {cname, get_kind(type.c_str()), 0};
         Config->exports.push_back(we);
      }
   }
@@ -532,4 +538,7 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
 
   // Write the result to the file.
   writeResult(true);
+
+  for (auto cp : export_strs)
+     delete[] cp;
 }
