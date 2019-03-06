@@ -22,7 +22,7 @@ namespace wasm {
 struct Configuration {
   inline bool should_export(const llvm::wasm::WasmExport& ex)const {
      for (auto x : exports) {
-        if ((x.Name == ex.Name || x.Name == "*") && x.Kind == ex.Kind)
+        if ((memcmp(x.Name.str().c_str(), ex.Name.str().c_str(), ex.Name.size()) == 0 || x.Name.str()[0] == '*') && x.Kind == ex.Kind)
            return true;
      }
      return false;
@@ -36,6 +36,7 @@ struct Configuration {
   bool GcSections;
   bool ImportMemory;
   bool ImportTable;
+  bool OtherModel;
   bool MergeDataSegments;
   bool OtherModel;
   bool PrintGcSections;
