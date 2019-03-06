@@ -138,9 +138,6 @@ def other_model: F<"other-model">,
 def stack_first: F<"stack-first">,
   HelpText<"Place stack at start of linear memory rather than after data">;
 
-def other_model: F<"other-model">,
-  HelpText<"Do not autogen a dispatcher">;
-
 // Aliases
 def alias_entry_e: JoinedOrSeparate<["-"], "e">, Alias<entry>;
 def alias_entry_entry: J<"entry=">, Alias<entry>;
