@@ -316,6 +316,7 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
 
   errorHandler().ErrorLimit = args::getInteger(Args, OPT_error_limit, 20);
 
+  Config->OtherModel = OPT_other_model;
   Config->AllowUndefined = Args.hasArg(OPT_allow_undefined);
   Config->Demangle = Args.hasFlag(OPT_demangle, OPT_no_demangle, true);
   Config->DisableVerify = Args.hasArg(OPT_disable_verify);
@@ -407,9 +408,11 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
         make<SyntheticFunction>(NullSignature, "__wasm_call_ctors"));
 
     static WasmSignature EntrySignature = {{WASM_TYPE_I64, WASM_TYPE_I64, WASM_TYPE_I64}, WASM_TYPE_NORESULT};
-    WasmSym::EntryFunc = Symtab->addSyntheticFunction(
-         Config->Entry, WASM_SYMBOL_VISIBILITY_DEFAULT | WASM_SYMBOL_BINDING_WEAK,
-         make<SyntheticFunction>(EntrySignature, Config->Entry));
+    if (!Config->OtherModel) {
+       WasmSym::EntryFunc = Symtab->addSyntheticFunction(
+            Config->Entry, WASM_SYMBOL_VISIBILITY_DEFAULT | WASM_SYMBOL_BINDING_WEAK,
+            make<SyntheticFunction>(EntrySignature, Config->Entry));
+    }
 
     // TODO(sbc): Remove WASM_SYMBOL_VISIBILITY_HIDDEN when the mutable global
     // spec proposal is implemented in all major browsers.
@@ -459,7 +462,6 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   if (errorCount())
     return;
 
-  Config->OtherModel = OPT_other_model;
      
   // Make sure we have resolved all symbols.
   if (!Config->Relocatable && !Config->AllowUndefined) {
