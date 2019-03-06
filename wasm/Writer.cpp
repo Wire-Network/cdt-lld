@@ -1358,7 +1358,7 @@ void Writer::run(bool is_entry_defined) {
   if (!Config->Relocatable)
     createCtorFunction();
 
-  if (Symtab->EntryIsUndefined)
+  if (!Config->OtherModel && Symtab->EntryIsUndefined)
      createDispatchFunction();
 
   log("-- calculateTypes");

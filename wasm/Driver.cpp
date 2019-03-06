@@ -459,6 +459,8 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   if (errorCount())
     return;
 
+  Config->OtherModel = OPT_other_model;
+     
   // Make sure we have resolved all symbols.
   if (!Config->Relocatable && !Config->AllowUndefined) {
     Symtab->reportRemainingUndefines();
