@@ -409,7 +409,7 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
         make<SyntheticFunction>(NullSignature, "__wasm_call_ctors"));
 
     static WasmSignature EntrySignature;
-    if (Config->OtherModel)
+    if (!Config->OtherModel)
        EntrySignature = {{WASM_TYPE_I64, WASM_TYPE_I64, WASM_TYPE_I64}, WASM_TYPE_NORESULT};
     else
        EntrySignature = {{}, WASM_TYPE_NORESULT};
