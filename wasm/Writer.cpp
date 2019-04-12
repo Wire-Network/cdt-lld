@@ -1170,10 +1170,12 @@ void Writer::createDispatchFunction() {
       // dispatch notification handlers
       bool notify0_need_else = false;
       if (not_cnt > 0) {
+         bool has_written = false;
          for (auto const& notif0 : notify_handlers) {
             uint64_t nm = eosio::cdt::string_to_name(notif0.first.c_str());
             if (notif0.first == "*")
                continue;
+            has_written = true;
             if (notify0_need_else)
                writeU8(OS, OPCODE_ELSE, "ELSE");
             writeU8(OS, OPCODE_I64_CONST, "I64.CONST");
@@ -1190,7 +1192,8 @@ void Writer::createDispatchFunction() {
                writeU8(OS, OPCODE_END, "END");
             notify0_need_else = true;
          }
-         writeU8(OS, OPCODE_ELSE, "ELSE");
+         if (has_written)
+            writeU8(OS, OPCODE_ELSE, "ELSE");
       }
 
       if (!notify_handlers["*"].empty()) {
