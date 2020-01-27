@@ -472,6 +472,10 @@ struct WasmSym {
   // __memory_base
   // Used in PIC code for offset of global data
   static UndefinedGlobal *memoryBase;
+
+  // entryFunc
+  // Function that is the entry of the program
+  static DefinedFunction* entryFunc;
 };
 
 // A buffer class that is large enough to hold any Symbol-derived

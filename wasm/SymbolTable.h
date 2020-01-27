@@ -41,7 +41,12 @@ public:
 
   void addCombinedLTOObject();
 
+  std::set<StringRef> allowed;
+  bool entryIsUndefined = true;
+
   ArrayRef<Symbol *> getSymbols() const { return symVector; }
+
+  inline void addAllowedUndefFunction(StringRef name) { allowed.insert(name); }
 
   Symbol *find(StringRef name);
 

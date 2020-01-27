@@ -39,6 +39,15 @@ void lld::wasm::markLive() {
   SmallVector<InputChunk *, 256> q;
 
   std::function<void(Symbol*)> enqueue = [&](Symbol *sym) {
+    try {
+       if (sym) {
+          outs() << "SSKD " << sym << "\n";
+          outs() << "Symbol Live " <<  sym->getName() << "\n";
+       }
+    } catch (...) {
+       /*skip*/
+    }
+
     if (!sym || sym->isLive())
       return;
     LLVM_DEBUG(dbgs() << "markLive: " << sym->getName() << "\n");
@@ -85,6 +94,26 @@ void lld::wasm::markLive() {
 
   if (config->isPic)
     enqueue(WasmSym::callCtors);
+
+  for (const ObjFile* obj : symtab->objectFiles) {
+     const auto& wasmObj = obj->getWasmObj();
+     for (const auto& func : wasmObj->functions()) {
+        for (const auto& action : wasmObj->actions()) {
+           if (func.SymbolName == action.substr(action.find(":")+1)) {
+              enqueue(symtab->find(func.SymbolName));
+           }
+           if (func.SymbolName == "pre_dispatch" || func.SymbolName == "post_dispatch" || func.SymbolName == "eosio_assert_code") {
+              enqueue(symtab->find(func.SymbolName));
+           }
+        }
+        for (const auto& notify : wasmObj->notify()) {
+           std::string sub = notify.substr(notify.find(":")+2);
+           if (func.SymbolName == sub.substr(sub.find(":")+1)) {
+              enqueue(symtab->find(func.SymbolName));
+           }
+        }
+     }
+  }
 
   // Follow relocations to mark all reachable chunks.
   while (!q.empty()) {

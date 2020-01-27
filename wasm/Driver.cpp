@@ -439,6 +439,10 @@ static Symbol *handleUndefined(StringRef name) {
   return sym;
 }
 
+static Symbol* addUndefined(StringRef name) {
+   return symtab->addUndefinedFunction(name, "", "", 0, nullptr, nullptr, false);
+}
+
 static UndefinedGlobal *
 createUndefinedGlobal(StringRef name, llvm::wasm::WasmGlobalType *type) {
   auto *sym =
@@ -458,10 +462,16 @@ static void createSyntheticSymbols() {
   static llvm::wasm::WasmGlobalType mutableGlobalTypeI32 = {WASM_TYPE_I32,
                                                             true};
 
+  static WasmSignature entrySignature = config->otherModel ? nullSignature : WasmSignature{{ValType::I64, ValType::I64, ValType::I64}, {}};
+
   if (!config->relocatable) {
     WasmSym::callCtors = symtab->addSyntheticFunction(
         "__wasm_call_ctors", WASM_SYMBOL_VISIBILITY_HIDDEN,
         make<SyntheticFunction>(nullSignature, "__wasm_call_ctors"));
+
+    WasmSym::entryFunc = symtab->addSyntheticFunction(
+          config->entry, WASM_SYMBOL_VISIBILITY_DEFAULT | WASM_SYMBOL_BINDING_WEAK,
+          make<SyntheticFunction>(entrySignature, config->entry));
 
     if (config->passiveSegments) {
       // Passive segments are used to avoid memory being reinitialized on each
@@ -585,10 +595,6 @@ struct WrappedSymbol {
   Symbol *real;
   Symbol *wrap;
 };
-
-static Symbol *addUndefined(StringRef name) {
-  return symtab->addUndefinedFunction(name, "", "", 0, nullptr, nullptr, false);
-}
 
 // Handles -wrap option.
 //
@@ -755,6 +761,37 @@ void LinkerDriver::link(ArrayRef<const char *> argsArr) {
   if (errorCount())
     return;
 
+  auto get_kind = [](const char* str) -> uint8_t {
+     if (strcmp(str, "function") == 0)
+        return 0;
+     else if (strcmp(str, "table") == 0)
+        return 1;
+     else if (strcmp(str, "memory") == 0)
+        return 2;
+     return 3;
+  };
+
+  auto get_first = [](const std::string& exp) {
+     return exp.substr(0, exp.find(":"));
+  };
+
+  auto get_second = [](const std::string& exp) {
+     return exp.substr(exp.find(":")+1);
+  };
+
+  std::vector<char*> exportStrs;
+  for (auto* arg : args.filtered(OPT_only_export)) {
+     auto name = get_first(std::string(arg->getValue()));
+     char* cname = new char[name.size()];
+     memcpy(cname, name.c_str(), name.size());
+     exportStrs.push_back(cname);
+     if (!name.empty()) {
+        auto type = get_second(std::string(arg->getValue()));
+        WasmExport we = {cname, get_kind(type.c_str()), 0};
+        config->exports.push_back(we);
+     }
+  }
+
   // Resolve any variant symbols that were created due to signature
   // mismatchs.
   symtab->handleSymbolVariants();
@@ -791,4 +828,8 @@ void LinkerDriver::link(ArrayRef<const char *> argsArr) {
 
   // Write the result to the file.
   writeResult();
+
+  // clean up
+  for (const auto* cp : exportStrs)
+     delete[] cp;
 }
