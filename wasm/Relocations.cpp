@@ -29,8 +29,16 @@ static bool allowUndefined(const Symbol* sym) {
   // compiling with -fPIC)
   if (isa<DataSymbol>(sym))
     return false;
-  return (config->allowUndefined ||
-          config->allowUndefinedSymbols.count(sym->getName()) != 0);
+
+  bool isAllowed = config->allowUndefined || config->allowUndefinedSymbols.count(sym->getName()) != 0;
+  if (!isAllowed) {
+    for (const auto *s : out.importSec->importedSymbols) {
+      if (sym->getName() == s->getName()) {
+        isAllowed = true;
+      }
+    }
+  }
+  return isAllowed;
 }
 
 static void reportUndefined(const Symbol* sym) {

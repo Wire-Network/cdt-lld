@@ -343,14 +343,15 @@ void ObjFile::parse(bool ignoreComdats) {
         symbols.push_back(d);
         continue;
       }
+    } else {
+      size_t idx = symbols.size();
+      symbols.push_back(createUndefined(wasmSym, isCalledDirectly[idx]));
     }
-    size_t idx = symbols.size();
-    //bool shouldDefine = true;
+
     for (const auto& allowed : wasmObj->allowed_imports()) {
        if (auto symName = sym.getName()) {
           if (*symName == allowed) {
              symtab->addAllowedUndefFunction(*symName);
-             //symbols.push_back(createUndefined(wasmSym, isCalledDirectly[idx]));
              break;
           }
        }

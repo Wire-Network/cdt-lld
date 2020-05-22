@@ -113,6 +113,9 @@ void lld::wasm::markLive() {
            }
         }
      }
+     for (const auto& import : wasmObj->imports()) {
+        enqueue(symtab->find(import.Field));
+     }
   }
 
   // Follow relocations to mark all reachable chunks.
