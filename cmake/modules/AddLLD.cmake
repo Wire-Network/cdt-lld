@@ -9,7 +9,7 @@ macro(add_lld_library name)
   endif()
   llvm_add_library(${name} ${ARG_ENABLE_SHARED} ${ARG_UNPARSED_ARGUMENTS})
   set_target_properties(${name} PROPERTIES FOLDER "lld libraries")
-  target_compile_options(${name} PUBLIC -fexceptions -Wno-reorder -Wno-sign-compare -Wno-unused-local-typedefs -fsanitize=address -fno-omit-frame-pointer)
+  target_compile_options(${name} PUBLIC -fexceptions -Wno-reorder -Wno-sign-compare -Wno-unused-local-typedefs -fno-omit-frame-pointer)
   target_include_directories(${name} PUBLIC ${EOSIO_TOOL_DIR}/jsoncons/include)
   target_include_directories(${name} PUBLIC ${EOSIO_TOOL_DIR}/include)
 
