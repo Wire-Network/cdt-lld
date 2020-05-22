@@ -462,7 +462,7 @@ static void createSyntheticSymbols() {
   static llvm::wasm::WasmGlobalType mutableGlobalTypeI32 = {WASM_TYPE_I32,
                                                             true};
 
-  static WasmSignature entrySignature = config->otherModel ? nullSignature : WasmSignature{{ValType::I64, ValType::I64, ValType::I64}, {}};
+  static WasmSignature entrySignature = config->otherModel ? nullSignature : WasmSignature{{}, {ValType::I64, ValType::I64, ValType::I64}};
 
   if (!config->relocatable) {
     WasmSym::callCtors = symtab->addSyntheticFunction(
