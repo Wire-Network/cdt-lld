@@ -492,8 +492,10 @@ static void createSyntheticSymbols() {
     }
   }
 
-  if (!config->shared)
+  if (!config->shared) {
+    config->exportedSymbols.insert("__data_end");
     WasmSym::dataEnd = symtab->addOptionalDataSymbol("__data_end");
+  }
 
   if (config->isPic) {
     WasmSym::stackPointer =
@@ -523,6 +525,7 @@ static void createSyntheticSymbols() {
     WasmSym::stackPointer = symtab->addSyntheticGlobal(
         "__stack_pointer", WASM_SYMBOL_VISIBILITY_HIDDEN, stackPointer);
     WasmSym::globalBase = symtab->addOptionalDataSymbol("__global_base");
+    config->exportedSymbols.insert("__heap_base");
     WasmSym::heapBase = symtab->addOptionalDataSymbol("__heap_base");
   }
 

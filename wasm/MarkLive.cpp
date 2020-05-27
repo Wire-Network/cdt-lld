@@ -39,15 +39,6 @@ void lld::wasm::markLive() {
   SmallVector<InputChunk *, 256> q;
 
   std::function<void(Symbol*)> enqueue = [&](Symbol *sym) {
-    try {
-       if (sym) {
-          outs() << "SSKD " << sym << "\n";
-          outs() << "Symbol Live " <<  sym->getName() << "\n";
-       }
-    } catch (...) {
-       /*skip*/
-    }
-
     if (!sym || sym->isLive())
       return;
     LLVM_DEBUG(dbgs() << "markLive: " << sym->getName() << "\n");
