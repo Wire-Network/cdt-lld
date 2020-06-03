@@ -530,9 +530,9 @@ void Writer::calculateExports() {
 
   for (Symbol *sym : symtab->getSymbols()) {
     if (!sym->isDefined()) continue;
-    if (!sym->isLive()) continue;
     if (sym->isHidden() && !config->exportAll) continue;
     if (sym->isLocal()) continue;
+    if (!sym->isLive()) continue;
 
     StringRef name = sym->getName();
     WasmExport export_;

@@ -752,6 +752,15 @@ void LinkerDriver::link(ArrayRef<const char *> argsArr) {
             config->entry);
   }
 
+  // Is the entry symbol found
+  for (ObjFile *file : symtab->objectFiles) {
+    for (Symbol *sym : file->getSymbols()) {
+       if (toString(*sym) == config->entry) {
+          symtab->entryIsUndefined = false;
+       }
+     }
+  }
+
   if (errorCount())
     return;
 
