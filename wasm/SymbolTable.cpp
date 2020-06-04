@@ -316,6 +316,7 @@ Symbol *SymbolTable::addDefinedFunction(StringRef name, uint32_t flags,
   // Existing function with matching signature.
   if (shouldReplace(s, file, flags))
     replaceSym(s);
+
   return s;
 }
 

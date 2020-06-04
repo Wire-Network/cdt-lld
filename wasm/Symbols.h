@@ -461,10 +461,6 @@ struct WasmSym {
   // Function that allocates thread-local storage and initializes it.
   static DefinedFunction *initTLS;
 
-  // EntryFunc
-  // Function that is the entry
-  static DefinedFunction *EntryFunc;
-
   // __dso_handle
   // Symbol used in calls to __cxa_atexit to determine current DLL
   static DefinedData *dsoHandle;

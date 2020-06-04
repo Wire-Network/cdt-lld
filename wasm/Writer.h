@@ -12,7 +12,7 @@
 namespace lld {
 namespace wasm {
 
-void writeResult(bool is_entry_defined);
+void writeResult();
 
 } // namespace wasm
 } // namespace lld
