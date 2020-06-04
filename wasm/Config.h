@@ -12,6 +12,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/BinaryFormat/Wasm.h"
+#include "llvm/Object/Wasm.h"
 #include "llvm/Support/CachePruning.h"
 #include "llvm/Object/Wasm.h"
 

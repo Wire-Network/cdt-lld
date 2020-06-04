@@ -29,6 +29,7 @@
 #include "llvm/Support/Process.h"
 #include "llvm/Support/TarWriter.h"
 #include "llvm/Support/TargetSelect.h"
+#include <cstring>
 
 #define DEBUG_TYPE "lld"
 
@@ -698,6 +699,7 @@ void LinkerDriver::link(ArrayRef<const char *> argsArr) {
     v.push_back(arg->getValue());
   cl::ParseCommandLineOptions(v.size(), v.data());
 
+
   errorHandler().errorLimit = args::getInteger(args, OPT_error_limit, 20);
 
   readConfigs(args);
@@ -766,7 +768,7 @@ void LinkerDriver::link(ArrayRef<const char *> argsArr) {
 
   // Create wrapped symbols for -wrap option.
   std::vector<WrappedSymbol> wrapped = addWrappedSymbols(args);
-
+  
   // Do link-time optimization if given files are LLVM bitcode files.
   // This compiles bitcode files into real object files.
   symtab->addCombinedLTOObject();

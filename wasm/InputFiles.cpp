@@ -12,6 +12,7 @@
 #include "InputEvent.h"
 #include "InputGlobal.h"
 #include "SymbolTable.h"
+
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Memory.h"
 #include "lld/Common/Reproduce.h"
@@ -258,6 +259,10 @@ void ObjFile::parse(bool ignoreComdats) {
       tableEntries[functionIndex] = offset + index;
     }
   }
+  
+  eosio_abi     = WasmObj->get_eosio_abi();
+  eosio_actions = WasmObj->actions();
+  eosio_notify  = WasmObj->notify();
 
   eosioABI     = wasmObj->get_eosio_abi();
   eosioActions = wasmObj->actions();

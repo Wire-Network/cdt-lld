@@ -89,6 +89,34 @@ private:
 
   void writeHeader();
   void writeSections();
+  void writeABI() {
+     if (abis.empty())
+        return;
+     try {
+        ABIMerger merger(ojson::parse(abis.back()));
+        for (auto abi : abis) {
+           merger.set_abi(merger.merge(ojson::parse(abi)));
+        }
+        SmallString<64> output_file = Config->OutputFile;
+        llvm::sys::path::replace_extension(output_file, ".abi");
+        Expected<std::unique_ptr<FileOutputBuffer>> BufferOrErr =
+          FileOutputBuffer::create(output_file, merger.get_abi_string().size());
+
+        if (!BufferOrErr)
+          error("failed to open " + Config->OutputFile + ": " +
+                toString(BufferOrErr.takeError()));
+        else {
+          auto Buffer = std::move(*BufferOrErr);
+          memcpy(Buffer->getBufferStart(), merger.get_abi_string().c_str(), merger.get_abi_string().size());
+          if (Error E = Buffer->commit())
+             fatal("failed to write the output file: " + toString(std::move(E)));
+        }
+     } catch (std::runtime_error& err) {
+        fatal(std::string(std::string("failed to write abi: ") + err.what()).c_str());
+     } catch (jsoncons::json_exception& ex) {
+        log("failed to write ABI");
+     }
+  }
 
   void writeABI() {
      if (abis.empty())

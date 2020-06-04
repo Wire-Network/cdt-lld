@@ -60,6 +60,7 @@ public:
 
   MutableArrayRef<Symbol *> getMutableSymbols() { return symbols; }
 
+  StringRef EosioABI;
 protected:
   InputFile(Kind k, MemoryBufferRef m) : mb(m), fileKind(k) {}
   MemoryBufferRef mb;
