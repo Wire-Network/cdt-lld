@@ -1,3 +1,4 @@
+# REQUIRES: mips
 # Check R_MIPS_PCxxx relocations calculation.
 
 # RUN: llvm-mc -filetype=obj -triple=mips-unknown-linux \
@@ -6,8 +7,6 @@
 # RUN:         -mcpu=mips32r6 %S/Inputs/mips-dynamic.s -o %t2.o
 # RUN: ld.lld %t1.o %t2.o -o %t.exe
 # RUN: llvm-objdump -mcpu=mips32r6 -d -t -s %t.exe | FileCheck %s
-
-# REQUIRES: mips
 
   .text
   .globl  __start
@@ -23,6 +22,7 @@ __start:
   .word _foo+8-.                    # R_MIPS_PC32
 
 # CHECK:      Disassembly of section .text:
+# CHECK-EMPTY:
 # CHECK-NEXT: __start:
 # CHECK-NEXT:    20000:       ec c8 00 08     lwpc    $6, 32
 #                                      ^-- (0x20020-0x20000)>>2

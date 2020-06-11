@@ -14,7 +14,9 @@ if(LLD_BUILT_STANDALONE)
 endif()
 
 llvm_canonicalize_cmake_booleans(
-  HAVE_LIBZ)
+  HAVE_LIBZ
+  LLVM_LIBXML2_ENABLED
+  )
 
 configure_lit_site_cfg(
   ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.py.in
@@ -32,9 +34,9 @@ configure_lit_site_cfg(
 set(LLD_TEST_DEPS lld)
 if (NOT LLD_BUILT_STANDALONE)
   list(APPEND LLD_TEST_DEPS
-    FileCheck count not llvm-ar llvm-as llvm-dis llvm-dwarfdump llvm-nm
-    llc llvm-config llvm-objdump llvm-readelf llvm-readobj yaml2obj obj2yaml
-    llvm-mc llvm-lib llvm-pdbutil opt llvm-bcanalyzer
+    FileCheck count llc llvm-ar llvm-as llvm-bcanalyzer llvm-config llvm-cvtres
+    llvm-dis llvm-dwarfdump llvm-lib llvm-mc llvm-nm llvm-objcopy llvm-objdump
+    llvm-pdbutil llvm-readelf llvm-readobj not obj2yaml opt yaml2obj
     )
 endif()
 
@@ -52,6 +54,9 @@ add_lit_testsuite(check-lld "Running lld test suite"
        lld_unit_site_config=${CMAKE_CURRENT_BINARY_DIR}/Unit/lit.site.cfg
   DEPENDS ${LLD_TEST_DEPS}
   )
+
+add_custom_target(lld-test-depends DEPENDS ${LLD_TEST_DEPS})
+set_target_properties(lld-test-depends PROPERTIES FOLDER "lld tests")
 
 add_lit_testsuites(LLD ${CMAKE_CURRENT_SOURCE_DIR}
   PARAMS lld_site_config=${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg

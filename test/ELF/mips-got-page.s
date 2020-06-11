@@ -1,12 +1,11 @@
+# REQUIRES: mips
 # Check the case when small section (less that 0x10000 bytes) occupies
 # two adjacent 0xffff-bytes pages. We need to create two GOT entries
 # for R_MIPS_GOT_PAGE relocations.
 
 # RUN: llvm-mc -filetype=obj -triple=mips64-unknown-linux -o %t.o %s
 # RUN: ld.lld --section-start .rodata=0x27FFC -shared -o %t.so %t.o
-# RUN: llvm-readobj -t -mips-plt-got %t.so | FileCheck %s
-
-# REQUIRES: mips
+# RUN: llvm-readobj --symbols --mips-plt-got %t.so | FileCheck %s
 
 # CHECK:       Name: bar
 # CHECK-NEXT:  Value: 0x28000

@@ -1,9 +1,9 @@
-// RUN: llvm-mc -filetype=obj -triple=armv7a-none-linux-gnueabi %S/Inputs/arm-shared.s -o %t
+// REQUIRES: arm
+// RUN: llvm-mc -arm-add-build-attributes -filetype=obj -triple=armv7a-none-linux-gnueabi %S/Inputs/arm-shared.s -o %t
 // RUN: ld.lld %t --shared -o %t.so
-// RUN: llvm-mc -filetype=obj -triple=armv7a-none-linux-gnueabi %s -o %t2
+// RUN: llvm-mc -arm-add-build-attributes -filetype=obj -triple=armv7a-none-linux-gnueabi %s -o %t2
 // RUN: ld.lld %t2 %t.so -o %t3
 // RUN: llvm-objdump -d -triple=armv7a-none-linux-gnueabi -start-address=69632 -stop-address=69664 %t3 | FileCheck %s
-// REQUIRES: arm
 
 // When we are dynamic linking, undefined weak references have a PLT entry so
 // we must create a thunk for the branch to the PLT entry.
@@ -22,6 +22,7 @@ _start:
  .space 32 * 1024 * 1024
 
 // CHECK: Disassembly of section .text:
+// CHECK-EMPTY:
 // CHECK-NEXT: _start:
 // CHECK-NEXT:    11000:       00 00 00 ea     b       #0 <__ARMv7ABSLongThunk_undefined_weak_we_expect_a_plt_entry_for>
 // CHECK-NEXT:    11004:       02 00 00 eb     bl      #8 <__ARMv7ABSLongThunk_bar2>

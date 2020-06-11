@@ -1,14 +1,13 @@
+# REQUIRES: mips
 # Check that relocatable object produced by LLD has zero gp0 value.
 
 # RUN: llvm-mc -filetype=obj -triple=mips-unknown-linux %s -o %t.o
 # RUN: ld.lld -r -o %t-rel.o %t.o
-# RUN: llvm-readobj -mips-reginfo %t-rel.o | FileCheck --check-prefix=REL %s
+# RUN: llvm-readobj --mips-reginfo %t-rel.o | FileCheck --check-prefix=REL %s
 
 # RUN: ld.lld -shared -o %t.so %S/Inputs/mips-gp0-non-zero.o
-# RUN: llvm-readobj -mips-reginfo %t.so | FileCheck --check-prefix=DSO %s
+# RUN: llvm-readobj --mips-reginfo %t.so | FileCheck --check-prefix=DSO %s
 # RUN: llvm-objdump -s -t %t.so | FileCheck --check-prefix=DUMP %s
-
-# REQUIRES: mips
 
 # REL: GP: 0x0
 

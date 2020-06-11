@@ -1,7 +1,6 @@
+# REQUIRES: x86
 # This test checks that CallGraphSort ignores edges that would form "bad"
 # clusters.
-
-# REQUIRES: x86
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t
 # RUN: echo "A C 1" > %t.call_graph
@@ -12,7 +11,7 @@
 # RUN: echo "G H 5" >> %t.call_graph
 # RUN: echo "H I 4" >> %t.call_graph
 # RUN: ld.lld -e A %t --call-graph-ordering-file %t.call_graph -o %t2
-# RUN: llvm-readobj -symbols %t2 | FileCheck %s
+# RUN: llvm-readobj --symbols %t2 | FileCheck %s
 
     .section    .text.A,"ax",@progbits
     .globl A

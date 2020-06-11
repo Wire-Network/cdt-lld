@@ -1,11 +1,11 @@
-// Should set the value of the "_end" symbol to the end of the data segment.
 // REQUIRES: x86
+// Should set the value of the "_end" symbol to the end of the data segment.
 
 // RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %s -o %t.o
 
 // By default, the .bss section is the latest section of the data segment.
 // RUN: ld.lld %t.o -o %t
-// RUN: llvm-readobj -sections -symbols %t | FileCheck %s --check-prefix=DEFAULT
+// RUN: llvm-readobj --sections --symbols %t | FileCheck %s --check-prefix=DEFAULT
 
 // DEFAULT: Sections [
 // DEFAULT:     Name: .bss

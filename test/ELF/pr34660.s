@@ -3,7 +3,7 @@
 # RUN: llvm-mc -filetype=obj -triple=aarch64-linux-none %s -o %t.o
 # RUN: ld.lld --hash-style=sysv -shared %t.o -o %t
 # RUN: llvm-objdump %t -d | FileCheck %s --check-prefix=DISASM
-# RUN: llvm-readobj -elf-output-style=GNU %t -t | FileCheck %s --check-prefix=SYM
+# RUN: llvm-readelf %t --symbols | FileCheck %s --check-prefix=SYM
 
 # It would be much easier to understand/read this test if llvm-objdump would print
 # the immediates in hex.
@@ -13,11 +13,12 @@
 # correct symbol.
 
 # DISASM: Disassembly of section .text:
+# DISASM-EMPTY:
 # DISASM-NEXT: $x.0:
-# DISASM-NEXT:   10000:       28 00 08 58     ldr     x8, #65540
+# DISASM-NEXT:   10000:       28 00 10 58     ldr     x8, #131076
 
 # SYM: Symbol table '.symtab'
-# SYM:  0000000000020004     0 NOTYPE  LOCAL  DEFAULT    5 patatino
+# SYM:  0000000000030004     0 NOTYPE  LOCAL  DEFAULT    6 patatino
 
   ldr x8, patatino
   .data

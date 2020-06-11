@@ -1,10 +1,9 @@
+# REQUIRES: mips
 # Check warning on orphaned R_MIPS_HI16 relocations.
 
 # RUN: llvm-mc -filetype=obj -triple=mips-unknown-linux %s -o %t.o
 # RUN: ld.lld %t.o -o %t.exe 2>&1 | FileCheck -check-prefix=WARN %s
 # RUN: llvm-objdump -d -t %t.exe | FileCheck %s
-
-# REQUIRES: mips
 
   .text
   .globl  __start
@@ -17,6 +16,7 @@ _label:
 # WARN: can't find matching R_MIPS_LO16 relocation for R_MIPS_HI16
 
 # CHECK:      Disassembly of section .text:
+# CHECK-EMPTY:
 # CHECK-NEXT: __start:
 # CHECK-NEXT:  20000:   3c 08 00 03   lui    $8, 3
 #                                                ^-- %hi(__start) w/o addend

@@ -3,7 +3,7 @@
 # RUN: echo "{ global: foo*; bar*; local: *; };" > %t.script
 # RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %s -o %t.o
 # RUN: ld.lld -shared --version-script %t.script %t.o -o %t.so
-# RUN: llvm-readobj -dyn-symbols %t.so | FileCheck %s
+# RUN: llvm-readobj --dyn-syms %t.so | FileCheck %s
 
         .globl foo1
 foo1:
@@ -48,7 +48,7 @@ local:
 # CHECK-NEXT: ]
 
 # RUN: echo "{ global : local; local: *; };" > %t1.script
-# RUN: ld.lld -shared --version-script %t1.script %t.o -o %t1.so
+# RUN: ld.lld -shared --version-script %t1.script %t.o -o /dev/null
 
 # LOCAL:      DynamicSymbols [
 # LOCAL-NEXT:   Symbol {

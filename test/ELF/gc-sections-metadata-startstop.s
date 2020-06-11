@@ -1,5 +1,5 @@
-# LINK_ORDER cnamed sections are not kept alive by the __start_* reference.
 # REQUIRES: x86
+# LINK_ORDER cnamed sections are not kept alive by the __start_* reference.
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %s -o %t.o
 # RUN: ld.lld --gc-sections %t.o -o %t
@@ -11,7 +11,7 @@
 # CHECK-NOT: yy
 
 # CHECK: SYMBOL TABLE:
-# CHECK: xx 00000000 __start_xx
+# CHECK:   xx    00000000 .protected __start_xx
 # CHECK: w *UND* 00000000 __start_yy
 
 .weak __start_xx

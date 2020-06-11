@@ -1,10 +1,9 @@
+# REQUIRES: mips
 # Check R_MIPS_HI16 / LO16 relocations calculation.
 
 # RUN: llvm-mc -filetype=obj -triple=mips-unknown-linux %s -o %t.o
 # RUN: ld.lld %t.o -o %t.exe
 # RUN: llvm-objdump -d -t %t.exe | FileCheck %s
-
-# REQUIRES: mips
 
   .text
   .globl  __start
@@ -31,6 +30,7 @@ g1:
   .word 0
 
 # CHECK:      Disassembly of section .text:
+# CHECK-EMPTY:
 # CHECK-NEXT: __start:
 # CHECK-NEXT:  20000:   3c 08 00 02   lui    $8, 2
 #                                                ^-- %hi(__start+4)
@@ -48,6 +48,6 @@ g1:
 #                                                    ^-- %lo(l1-4)
 
 # CHECK: SYMBOL TABLE:
-# CHECK: 0030000 l   .data   00000004 l1
-# CHECK: 0020000     .text   00000000 __start
-# CHECK: 0030004 g   .data   00000004 g1
+# CHECK: 0030000 l     O .data   00000004 l1
+# CHECK: 0020000         .text   00000000 __start
+# CHECK: 0030004 g     O .data   00000004 g1

@@ -1,3 +1,4 @@
+# REQUIRES: x86
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux \
 # RUN:     %p/Inputs/abs.s -o %tabs.o
@@ -5,7 +6,6 @@
 # RUN:     %p/Inputs/shared.s -o %tshared.o
 # RUN: rm -f %tar.a
 # RUN: llvm-ar rcs %tar.a %tabs.o %tshared.o
-# REQUIRES: x86
 
 # Symbols from the archive are not in if not needed
 # RUN: ld.lld -o %t1 %t.o %tar.a
@@ -40,7 +40,7 @@
 # TWO-UNDEFINED: Name: zed
 # TWO-UNDEFINED: ]
 # Now the same logic but linker script is used to set undefines
-# RUN: echo "EXTERN( bar abs )" > %t.script
+# RUN: echo "EXTERN( bar \"abs\" )" > %t.script
 # RUN: ld.lld -o %t3 %t.o %tar.a %t.script
 # RUN: llvm-readobj --symbols %t3 | FileCheck --check-prefix=TWO-UNDEFINED %s
 

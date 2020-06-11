@@ -29,6 +29,21 @@
 ; RUN: ls %t2.o.thinlto.bc
 ; RUN: not test -e %t4
 
+; Test that LLD generates an empty index even for lazy object file that is not added to link.
+; Test LLD generates empty imports file either because of thinlto-emit-imports-files option.
+; RUN: rm -f %t1.o.thinlto.bc
+; RUN: rm -f %t1.o.imports
+; RUN: ld.lld --plugin-opt=thinlto-index-only -shared %t2.o --start-lib %t1.o --end-lib \
+; RUN: --plugin-opt=thinlto-emit-imports-files -o %t3
+; RUN: ls %t1.o.thinlto.bc
+; RUN: ls %t1.o.imports
+
+; Ensure LLD generates an empty index for each bitcode file even if all bitcode files are lazy.
+; RUN: rm -f %t1.o.thinlto.bc
+; RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux-gnu /dev/null -o %tdummy.o
+; RUN: ld.lld --plugin-opt=thinlto-index-only -shared %tdummy.o --start-lib %t1.o --end-lib -o /dev/null
+; RUN: ls %t1.o.thinlto.bc
+
 ; NM: T f
 
 ; The backend index for this module contains summaries from itself and
