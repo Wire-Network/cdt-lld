@@ -9,6 +9,7 @@
 #include "Relocations.h"
 
 #include "InputChunks.h"
+#include "SymbolTable.h"
 #include "SyntheticSections.h"
 
 using namespace llvm;
@@ -30,15 +31,10 @@ static bool allowUndefined(const Symbol* sym) {
   if (isa<DataSymbol>(sym))
     return false;
 
-  bool isAllowed = config->allowUndefined || config->allowUndefinedSymbols.count(sym->getName()) != 0;
-  if (!isAllowed) {
-    for (const auto *s : out.importSec->importedSymbols) {
-      if (sym->getName() == s->getName()) {
-        isAllowed = true;
-      }
-    }
-  }
-  return isAllowed;
+  bool isConfigAllowed = config->allowUndefined || config->allowUndefinedSymbols.count(sym->getName()) != 0;
+  bool isAllowed = symtab->allowed.count(sym->getName());
+
+  return isConfigAllowed || isAllowed;
 }
 
 static void reportUndefined(const Symbol* sym) {
