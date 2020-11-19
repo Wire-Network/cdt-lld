@@ -93,7 +93,8 @@ void lld::wasm::markLive() {
            if (func.SymbolName == action.substr(action.find(":")+1)) {
               enqueue(symtab->find(func.SymbolName));
            }
-           if (func.SymbolName == "pre_dispatch" || func.SymbolName == "post_dispatch" || func.SymbolName == "eosio_assert_code") {
+           if (func.SymbolName == "pre_dispatch" || func.SymbolName == "post_dispatch" || func.SymbolName == "eosio_assert_code" ||
+               func.SymbolName == "eosio_set_contract_name") {
               enqueue(symtab->find(func.SymbolName));
            }
         }
