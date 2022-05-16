@@ -426,6 +426,11 @@ struct WasmSym {
   // linear memory.
   static GlobalSymbol *stackPointer;
 
+  // __stack_canary
+  // Global that holds the canary value for stack protection 
+  static GlobalSymbol *stackCanary;
+
+
   // __tls_base
   // Global that holds the address of the base of the current thread's
   // TLS block.

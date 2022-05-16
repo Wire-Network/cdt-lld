@@ -34,6 +34,7 @@
 #include "llvm/Support/Path.h"
 
 #include <cstdarg>
+#include <limits>
 #include <map>
 #include <eosio/abimerge.hpp>
 #include <eosio/utils.hpp>
@@ -632,8 +633,9 @@ void Writer::assignIndexes() {
       out.functionSec->addFunction(func);
   }
 
-  for (InputGlobal *global : symtab->syntheticGlobals)
+  for (InputGlobal *global : symtab->syntheticGlobals) {
     out.globalSec->addGlobal(global);
+  }
 
   for (ObjFile *file : symtab->objectFiles) {
     LLVM_DEBUG(dbgs() << "Globals: " << file->getName() << "\n");
@@ -693,18 +695,24 @@ void Writer::createOutputSegments() {
   }
 }
 
-static constexpr int OPCODE_CALL = 0x10;
-static constexpr int OPCODE_IF   = 0x4;
-static constexpr int OPCODE_ELSE = 0x5;
-static constexpr int OPCODE_END  = 0xb;
-static constexpr int OPCODE_GET_LOCAL = 0x20;
-static constexpr int OPCODE_I64_EQ    = 0x51;
-static constexpr int OPCODE_I64_NE    = 0x52;
-static constexpr int OPCODE_I32_CONST = 0x41;
-static constexpr int OPCODE_I64_CONST = 0x42;
+static constexpr int OPCODE_CALL       = 0x10;
+static constexpr int OPCODE_IF         = 0x4;
+static constexpr int OPCODE_ELSE       = 0x5;
+static constexpr int OPCODE_END        = 0xb;
+static constexpr int OPCODE_GET_LOCAL  = 0x20;
+static constexpr int OPCODE_GET_GLOBAL = 0x23;
+static constexpr int OPCODE_SET_GLOBAL = 0x24;
+static constexpr int OPCODE_I64_EQ     = 0x51;
+static constexpr int OPCODE_I64_NE     = 0x52;
+static constexpr int OPCODE_I32_CONST  = 0x41;
+static constexpr int OPCODE_I64_CONST  = 0x42;
+static constexpr int OPCODE_I64_STORE  = 0x37;
+static constexpr int OPCODE_I64_LOAD   = 0x29;
+static constexpr int OPCODE_I64_ADD    = 0x7c;
 static constexpr uint64_t EOSIO_COMPILER_ERROR_BASE = 8000000000000000000ull;
 static constexpr uint64_t EOSIO_ERROR_NO_ACTION     = EOSIO_COMPILER_ERROR_BASE;
 static constexpr uint64_t EOSIO_ERROR_ONERROR       = EOSIO_COMPILER_ERROR_BASE+1;
+static constexpr uint64_t EOSIO_CANARY_FAILURE      = EOSIO_COMPILER_ERROR_BASE+2;
 
 static void createFunction(DefinedFunction *func, StringRef bodyContent) {
   std::string functionBody;
@@ -1108,6 +1116,8 @@ void Writer::createDispatchFunction() {
 
       for (int i=0; i < notify_handlers["*"].size(); i++)
         writeU8(OS, OPCODE_END, "END");
+
+
    };
 
    std::string BodyContent;
@@ -1131,6 +1141,33 @@ void Writer::createDispatchFunction() {
             writeUleb128(OS, ctors_idx, "__wasm_call_ctors");
          }
 
+      }
+
+      if (config->stackCanary) {
+          auto gsym = (GlobalSymbol*)symtab->find("__stack_canary");
+          auto time_sym = (FunctionSymbol*)symtab->find("current_time");
+          uint32_t time_idx = UINT32_MAX;
+          if (time_sym)
+             time_idx = time_sym->getFunctionIndex();
+          else
+             fatal("internal error, current_time not found");
+
+          writeU8(OS, OPCODE_CALL, "CALL");
+          writeU8(OS, time_idx, "current_time");
+          writeU8(OS, OPCODE_SET_GLOBAL, "SET_GLOBAL");
+          writeUleb128(OS, gsym->getGlobalIndex(), "__stack_canary");
+
+
+          auto desym = (GlobalSymbol*)symtab->find("__data_end");
+          writeU8(OS, OPCODE_I32_CONST, "i32.const");
+          writeUleb128(OS, desym->getGlobalIndex() + 8, "__data_end + 8"); // add 8 bytes to __data_end to be in the stack area
+
+          writeU8(OS, OPCODE_GET_GLOBAL, "GET_GLOBAL");
+          writeUleb128(OS, gsym->getGlobalIndex(), "__stack_canary");
+
+          writeU8(OS, OPCODE_I64_STORE, "i64.store");
+          writeUleb128(OS, 3, "align=8");
+          writeUleb128(OS, 0, "offset=0");
       }
 
       // create the pre_dispatch function call
@@ -1167,7 +1204,33 @@ void Writer::createDispatchFunction() {
       create_notify_dispatch(OS);
 
       writeU8(OS, OPCODE_END, "END");
+      if (config->stackCanary) {
+        auto gsym = (GlobalSymbol*)symtab->find("__stack_canary");
+        auto desym = (GlobalSymbol*)symtab->find("__data_end");
 
+        writeU8(OS, OPCODE_GET_GLOBAL, "GET_GLOBAL");
+        writeUleb128(OS, gsym->getGlobalIndex(), "GET_GLOBAL");
+
+        writeU8(OS, OPCODE_I32_CONST, "i32.const");
+        writeUleb128(OS, desym->getGlobalIndex() + 8, "__data_end + 8");
+        
+        writeU8(OS, OPCODE_I64_LOAD, "i64.load");
+        writeUleb128(OS, 3, "align=8");
+        writeUleb128(OS, 0, "offset=0");
+
+        writeU8(OS, OPCODE_I64_NE, "i64.ne");
+        writeU8(OS, OPCODE_IF, "if canary doesn't equal global held canary");
+        writeU8(OS, 0x40, "none");
+
+        auto assert_sym = (FunctionSymbol*)symtab->find("eosio_assert_code");
+        writeU8(OS, OPCODE_I32_CONST, "i32.const");
+        writeUleb128(OS, 0, "false");
+        writeU8(OS, OPCODE_I64_CONST, "i64.const");
+        encodeSLEB128((int64_t)EOSIO_CANARY_FAILURE, OS);
+        writeU8(OS, OPCODE_CALL, "CALL");
+        writeUleb128(OS, assert_sym->getFunctionIndex(), "eosio_assert_code");
+        writeU8(OS, OPCODE_END, "END");
+      }
       auto dtors_sym = (FunctionSymbol*)symtab->find("__cxa_finalize");
       if (dtors_sym) {
          uint32_t dtors_idx = dtors_sym->getFunctionIndex();
@@ -1182,6 +1245,7 @@ void Writer::createDispatchFunction() {
          writeU8(OS, OPCODE_END, "END");
       writeU8(OS, OPCODE_END, "END");
    }
+
    createFunction(WasmSym::entryFunc, BodyContent);
 };
 

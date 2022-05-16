@@ -341,6 +341,7 @@ static void readConfigs(opt::InputArgList &args) {
   config->shared = args.hasArg(OPT_shared);
   config->stripAll = args.hasArg(OPT_strip_all);
   config->stripDebug = args.hasArg(OPT_strip_debug);
+  config->stackCanary = args.hasArg(OPT_stack_canary);
   config->stackFirst = args.hasArg(OPT_stack_first);
   config->trace = args.hasArg(OPT_trace);
   config->thinLTOCacheDir = args.getLastArgValue(OPT_thinlto_cache_dir);
@@ -524,6 +525,17 @@ static void createSyntheticSymbols() {
     // See: https://github.com/WebAssembly/mutable-global
     WasmSym::stackPointer = symtab->addSyntheticGlobal(
         "__stack_pointer", WASM_SYMBOL_VISIBILITY_HIDDEN, stackPointer);
+    if (config->stackCanary) {
+        llvm::wasm::WasmGlobal canary;
+        canary.Type = {WASM_TYPE_I64, true};
+        canary.InitExpr.Value.Int64 = 0;
+	canary.InitExpr.Opcode = WASM_OPCODE_I64_CONST;
+        canary.SymbolName = "__stack_canary";
+        auto* sc = make<InputGlobal>(canary, nullptr);
+        sc->live = true;
+        WasmSym::stackCanary = symtab->addSyntheticGlobal(
+           "__stack_canary", WASM_SYMBOL_VISIBILITY_HIDDEN, sc);	
+    }
     WasmSym::globalBase = symtab->addOptionalDataSymbol("__global_base");
     config->exportedSymbols.insert("__heap_base");
     WasmSym::heapBase = symtab->addOptionalDataSymbol("__heap_base");

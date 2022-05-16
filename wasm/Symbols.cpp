@@ -34,6 +34,7 @@ DefinedData *WasmSym::dataEnd;
 DefinedData *WasmSym::globalBase;
 DefinedData *WasmSym::heapBase;
 GlobalSymbol *WasmSym::stackPointer;
+GlobalSymbol *WasmSym::stackCanary;
 GlobalSymbol *WasmSym::tlsBase;
 GlobalSymbol *WasmSym::tlsSize;
 UndefinedGlobal *WasmSym::tableBase;

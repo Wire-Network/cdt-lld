@@ -45,6 +45,7 @@ struct Configuration {
   bool shared;
   bool stripAll;
   bool stripDebug;
+  bool stackCanary;
   bool stackFirst;
   bool trace;
   uint32_t globalBase;

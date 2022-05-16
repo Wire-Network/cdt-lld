@@ -6,6 +6,7 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   set(CMAKE_INCLUDE_CURRENT_DIR ON)
   set(LLD_BUILT_STANDALONE TRUE)
 
+
   find_program(LLVM_CONFIG_PATH "llvm-config" DOC "Path to llvm-config binary")
   if(NOT LLVM_CONFIG_PATH)
     message(FATAL_ERROR "llvm-config not found: specify LLVM_CONFIG_PATH")
