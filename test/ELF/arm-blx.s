@@ -1,3 +1,4 @@
+// REQUIRES: arm
 // RUN: llvm-mc -filetype=obj -triple=armv7a-none-linux-gnueabi %s -o %t
 // RUN: llvm-mc -filetype=obj -triple=armv7a-none-linux-gnueabi %S/Inputs/far-arm-thumb-abs.s -o %tfar
 // RUN: echo "SECTIONS { \
@@ -10,7 +11,6 @@
 // RUN: ld.lld --script %t.script %t %tfar -o %t2 2>&1
 // RUN: llvm-objdump -d -triple=armv7a-none-linux-gnueabi %t2 | FileCheck -check-prefix=CHECK-ARM %s
 // RUN: llvm-objdump -d -triple=thumbv7a-none-linux-gnueabi %t2 | FileCheck -check-prefix=CHECK-THUMB %s
-// REQUIRES: arm
 
 // Test BLX instruction is chosen for ARM BL/BLX instruction and Thumb callee
 // Using two callees to ensure at least one has 2-byte alignment.
@@ -74,16 +74,19 @@ callee_arm_high:
   bx lr
 
 // CHECK-THUMB: Disassembly of section .callee1:
+// CHECK-THUMB-EMPTY:
 // CHECK-THUMB-NEXT: callee_low:
 // CHECK-THUMB-NEXT:    b4:       70 47   bx      lr
 // CHECK-THUMB: callee_low2:
 // CHECK-THUMB-NEXT:    b6:       70 47   bx      lr
 
 // CHECK-ARM: Disassembly of section .callee2:
+// CHECK-ARM-EMPTY:
 // CHECK-ARM-NEXT: callee_arm_low:
 // CHECK-ARM-NEXT:    100:        1e ff 2f e1     bx      lr
 
 // CHECK-ARM: Disassembly of section .caller:
+// CHECK-ARM-EMPTY:
 // CHECK-ARM-NEXT: _start:
 // CHECK-ARM-NEXT:   10000:       2b c0 ff fa     blx     #-65364 <callee_low>
 // CHECK-ARM-NEXT:   10004:       2a c0 ff fa     blx     #-65368 <callee_low>
@@ -104,11 +107,13 @@ callee_arm_high:
 // CHECK-ARM-NEXT:   10038:       1e ff 2f e1     bx      lr
 
 // CHECK-THUMB: Disassembly of section .callee3:
+// CHECK-THUMB-EMPTY:
 // CHECK-THUMB: callee_high:
 // CHECK-THUMB-NEXT:    10100:       70 47   bx      lr
 // CHECK-THUMB: callee_high2:
 // CHECK-THUMB-NEXT:    10102:       70 47   bx      lr
 
 // CHECK-ARM: Disassembly of section .callee4:
+// CHECK-ARM-EMPTY:
 // CHECK-NEXT-ARM: callee_arm_high:
 // CHECK-NEXT-ARM:   10200:     1e ff 2f e1     bx      lr

@@ -31,22 +31,24 @@ _start:
  leal var1@ntpoff+123(%ecx), %eax
 
 // DIS:      Disassembly of section test:
+// DIS-EMPTY:
 // DIS-NEXT: _start:
-// DIS-NEXT: 11000: ba 08 00 00 00       movl $8, %edx
-// DIS-NEXT: 11005: 65 8b 0d 00 00 00 00 movl %gs:0, %ecx
-// DIS-NEXT: 1100c: 29 d0                subl %edx, %eax
-// DIS-NEXT: 1100e: ba 04 00 00 00       movl $4, %edx
-// DIS-NEXT: 11013: 65 8b 0d 00 00 00 00 movl %gs:0, %ecx
-// DIS-NEXT: 1101a: 29 d0                subl %edx, %eax
-// DIS-NEXT: 1101c: 65 8b 0d 00 00 00 00 movl %gs:0, %ecx
-// DIS-NEXT: 11023: 8d 81 f8 ff ff ff    leal -8(%ecx), %eax
-// DIS-NEXT: 11029: 65 8b 0d 00 00 00 00 movl %gs:0, %ecx
-// DIS-NEXT: 11030: 8d 81 77 00 00 00    leal 119(%ecx), %eax
+// DIS-NEXT: 401000: ba 08 00 00 00       movl $8, %edx
+// DIS-NEXT: 401005: 65 8b 0d 00 00 00 00 movl %gs:0, %ecx
+// DIS-NEXT: 40100c: 29 d0                subl %edx, %eax
+// DIS-NEXT: 40100e: ba 04 00 00 00       movl $4, %edx
+// DIS-NEXT: 401013: 65 8b 0d 00 00 00 00 movl %gs:0, %ecx
+// DIS-NEXT: 40101a: 29 d0                subl %edx, %eax
+// DIS-NEXT: 40101c: 65 8b 0d 00 00 00 00 movl %gs:0, %ecx
+// DIS-NEXT: 401023: 8d 81 f8 ff ff ff    leal -8(%ecx), %eax
+// DIS-NEXT: 401029: 65 8b 0d 00 00 00 00 movl %gs:0, %ecx
+// DIS-NEXT: 401030: 8d 81 77 00 00 00    leal 119(%ecx), %eax
 
 // RELOC: Relocations [
 // RELOC-NEXT: ]
 
 // DISSHARED: Disassembly of section test:
+// DISSHARED-EMPTY:
 // DISSHARED-NEXT: _start:
 // DISSHARED-NEXT: 1000: ba 00 00 00 00 movl   $0, %edx
 // DISSHARED-NEXT: 1005: 65 8b 0d 00 00 00 00  movl %gs:0, %ecx

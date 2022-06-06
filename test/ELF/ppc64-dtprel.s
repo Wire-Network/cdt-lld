@@ -2,15 +2,17 @@
 
 // RUN: llvm-mc -filetype=obj -triple=powerpc64le-unknown-linux %s -o %t.o
 // RUN: ld.lld -shared %t.o -o %t.so
-// RUN: llvm-readelf -relocations --wide %t.o | FileCheck --check-prefix=InputRelocs %s
-// RUN: llvm-readelf -relocations --wide %t.so | FileCheck --check-prefix=OutputRelocs %s
-// RUN: llvm-objdump -D %t.so | FileCheck --check-prefix=Dis %s
+// RUN: llvm-readelf -r %t.o | FileCheck --check-prefix=InputRelocs %s
+// RUN: llvm-readelf -r %t.so | FileCheck --check-prefix=OutputRelocs %s
+// RUN: llvm-readelf -x .got %t.so | FileCheck --check-prefix=HEX-LE %s
+// RUN: llvm-objdump -d --no-show-raw-insn %t.so | FileCheck --check-prefix=Dis %s
 
 // RUN: llvm-mc -filetype=obj -triple=powerpc64-unknown-linux %s -o %t.o
 // RUN: ld.lld -shared %t.o -o %t.so
-// RUN: llvm-readelf -relocations --wide %t.o | FileCheck --check-prefix=InputRelocs %s
-// RUN: llvm-readelf -relocations --wide %t.so | FileCheck --check-prefix=OutputRelocs %s
-// RUN: llvm-objdump -D %t.so | FileCheck --check-prefix=Dis %s
+// RUN: llvm-readelf -r %t.o | FileCheck --check-prefix=InputRelocs %s
+// RUN: llvm-readelf -r %t.so | FileCheck --check-prefix=OutputRelocs %s
+// RUN: llvm-readelf -x .got %t.so | FileCheck --check-prefix=HEX-BE %s
+// RUN: llvm-objdump -d --no-show-raw-insn %t.so | FileCheck --check-prefix=Dis %s
 
         .text
         .abiversion 2
@@ -135,10 +137,19 @@ k:
 // OutputRelocs-NEXT: R_PPC64_DTPMOD64
 
 
-// i@dtprel  --> (1024 - 0x8000) = -31744
-// Dis: test:
-// Dis:    addi 4, 3, -31744
-// Dis:    lwa 4, -31744(3)
+// The got entry for i is at .got+8*3 = 0x420510
+// i@dtprel = 1024 - 0x8000 = -31744 = 0xffffffffffff8400
+// HEX-LE:      section '.got':
+// HEX-LE-NEXT: 4204f8 f8844200 00000000 00000000 00000000
+// HEX-LE-NEXT: 420508 00000000 00000000
+
+// HEX-BE:      section '.got':
+// HEX-BE-NEXT: 4204f8 00000000 004284f8 00000000 00000000
+// HEX-BE-NEXT: 420508 00000000 00000000
+
+// Dis:     test:
+// Dis:      addi 4, 3, -31744
+// Dis-NEXT: lwa 4, -31744(3)
 
 // #k@dtprel(1024 + 4 + 1024 * 1024 * 4) = 0x400404
 
@@ -161,3 +172,4 @@ k:
 // Dis:    ori 4, 4, 0
 // Dis:    oris 4, 4, 63
 // Dis:    ori 4, 4, 33796
+

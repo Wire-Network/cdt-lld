@@ -1,5 +1,5 @@
 # RUN: yaml2obj %s -o %t
-# RUN: ld.lld -shared %t -o %tout
+# RUN: ld.lld -shared %t -o /dev/null
 
 # Verify that lld can handle STT_SECTION symbols associated
 # with SHT_REL[A]/SHT_SYMTAB/SHT_STRTAB sections.
@@ -24,12 +24,11 @@ Sections:
     Info:            .text
     Relocations:
 Symbols:
-  Local:
-    - Type:            STT_SECTION
-      Section:         .rela.text
-    - Type:            STT_SECTION
-      Section:         .shstrtab
-    - Type:            STT_SECTION
-      Section:         .symtab
-    - Type:            STT_SECTION
-      Section:         .strtab
+  - Type:            STT_SECTION
+    Section:         .rela.text
+  - Type:            STT_SECTION
+    Section:         .shstrtab
+  - Type:            STT_SECTION
+    Section:         .symtab
+  - Type:            STT_SECTION
+    Section:         .strtab

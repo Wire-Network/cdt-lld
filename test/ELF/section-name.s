@@ -1,7 +1,7 @@
+# REQUIRES: x86
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t
 # RUN: ld.lld %t -o %tout
 # RUN: llvm-objdump --section-headers  %tout | FileCheck %s
-# REQUIRES: x86
 
 .global _start
 .text
@@ -45,12 +45,12 @@ _start:
 // CHECK:  1 .rodata  00000002
 // CHECK:  2 .gcc_except_table 00000001
 // CHECK:  3 .text         00000002
-// CHECK:  4 .data         00000002
-// CHECK:  5 .foo.a        00000001
-// CHECK:  6 .foo          00000001
-// CHECK:  7 .tdata        00000001
-// CHECK:  8 .tbss         00000001
-// CHECK:  9 .data.rel.ro  00000004
+// CHECK:  4 .tdata        00000001
+// CHECK:  5 .tbss         00000001
+// CHECK:  6 .data.rel.ro  00000004
+// CHECK:  7 .data         00000002
+// CHECK:  8 .foo.a        00000001
+// CHECK:  9 .foo          00000001
 // CHECK: 10 .bss          00000002
 // CHECK: 11 .comment      00000008
 // CHECK: 12 .symtab       00000030

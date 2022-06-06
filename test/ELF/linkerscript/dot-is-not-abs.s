@@ -3,7 +3,7 @@
 
 # RUN: echo "SECTIONS { .text : { *(.text) } foo = .; .bar : { *(.bar) } }" > %t1.script
 # RUN: ld.lld -o %t1 --script %t1.script %t.o -shared
-# RUN: llvm-readobj -t -s -section-data %t1 | FileCheck %s
+# RUN: llvm-readobj --symbols -S --section-data %t1 | FileCheck %s
 
 .hidden foo
 .long foo - .
@@ -26,7 +26,7 @@
 # CHECK-NEXT:     SHF_ALLOC
 # CHECK-NEXT:     SHF_EXECINSTR
 # CHECK-NEXT:   ]
-# CHECK-NEXT:   Address: 0x1C
+# CHECK-NEXT:   Address: 0x0
 # CHECK-NEXT:   Offset:
 # CHECK-NEXT:   Size: 4
 # CHECK-NEXT:   Link:
@@ -40,7 +40,7 @@
 
 # CHECK:      Symbol {
 # CHECK:        Name: foo
-# CHECK-NEXT:   Value: 0x20
+# CHECK-NEXT:   Value: 0x4
 # CHECK-NEXT:   Size: 0
 # CHECK-NEXT:   Binding: Local
 # CHECK-NEXT:   Type: None

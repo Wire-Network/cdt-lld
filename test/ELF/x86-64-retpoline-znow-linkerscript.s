@@ -13,6 +13,7 @@
 // RUN: llvm-objdump -d -s %t.exe | FileCheck %s
 
 // CHECK:      Disassembly of section .plt:
+// CHECK-EMPTY:
 // CHECK-NEXT: .plt:
 // CHECK-NEXT: 10:	e8 0b 00 00 00 	callq	11 <.plt+0x10>
 // CHECK-NEXT: 15:	f3 90 	pause
@@ -35,13 +36,13 @@
 // CHECK-NEXT: 2d:	cc 	int3
 // CHECK-NEXT: 2e:	cc 	int3
 // CHECK-NEXT: 2f:	cc 	int3
-// CHECK-NEXT: 30:	4c 8b 1d a9 00 00 00 	movq	169(%rip), %r11
+// CHECK-NEXT: 30:	4c 8b 1d 31 00 00 00 	movq	49(%rip), %r11
 // CHECK-NEXT: 37:	e9 d4 ff ff ff 	jmp	-44 <.plt>
 // CHECK-NEXT: 3c:	cc 	int3
 // CHECK-NEXT: 3d:	cc 	int3
 // CHECK-NEXT: 3e:	cc 	int3
 // CHECK-NEXT: 3f:	cc 	int3
-// CHECK-NEXT: 40:      4c 8b 1d a1 00 00 00 	movq	161(%rip), %r11
+// CHECK-NEXT: 40:      4c 8b 1d 29 00 00 00 	movq	41(%rip), %r11
 // CHECK-NEXT: 47:	e9 c4 ff ff ff 	jmp	-60 <.plt>
 // CHECK-NEXT: 4c:	cc 	int3
 // CHECK-NEXT: 4d:	cc 	int3

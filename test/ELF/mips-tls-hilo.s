@@ -1,15 +1,14 @@
+# REQUIRES: mips
 # Check MIPS R_MIPS_TLS_DTPREL_HI16/LO16 and R_MIPS_TLS_TPREL_HI16/LO16
 # relocations handling.
 
 # RUN: llvm-mc -filetype=obj -triple=mips-unknown-linux %s -o %t.o
 # RUN: ld.lld %t.o -o %t.exe
 # RUN: llvm-objdump -d -t %t.exe | FileCheck -check-prefix=DIS %s
-# RUN: llvm-readobj -r -mips-plt-got %t.exe | FileCheck %s
+# RUN: llvm-readobj -r --mips-plt-got %t.exe | FileCheck %s
 
 # RUN: ld.lld %t.o -shared -o %t.so
-# RUN: llvm-readobj -r -mips-plt-got %t.so | FileCheck -check-prefix=SO %s
-
-# REQUIRES: mips
+# RUN: llvm-readobj -r --mips-plt-got %t.so | FileCheck -check-prefix=SO %s
 
 # DIS:      __start:
 # DIS-NEXT:    20000:   24 62 00 00   addiu   $2, $3, 0
@@ -21,7 +20,7 @@
 # DIS-NEXT:    2000c:   24 62 90 00   addiu   $2, $3, -28672
 #                       %lo(loc0 - .tdata - 0x7000) --^
 
-# DIS: 00000000 l       .tdata          00000000 loc0
+# DIS: 00000000 l    O .tdata          00000000 loc0
 
 # CHECK:      Relocations [
 # CHECK-NEXT: ]
