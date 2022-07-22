@@ -89,24 +89,30 @@ void lld::wasm::markLive() {
   for (const ObjFile* obj : symtab->objectFiles) {
      const auto& wasmObj = obj->getWasmObj();
      for (const auto& func : wasmObj->functions()) {
+        if (func.SymbolName == "pre_dispatch" || func.SymbolName == "post_dispatch" || func.SymbolName == "eosio_assert_code" ||
+            func.SymbolName == "eosio_set_contract_name") {
+           enqueue(symtab->find(func.SymbolName));
+           continue;
+        }
         for (const auto& action : wasmObj->actions()) {
            if (func.SymbolName == action.substr(action.find(":")+1)) {
               enqueue(symtab->find(func.SymbolName));
-           }
-           if (func.SymbolName == "pre_dispatch" || func.SymbolName == "post_dispatch" || func.SymbolName == "eosio_assert_code" ||
-               func.SymbolName == "eosio_set_contract_name") {
-              enqueue(symtab->find(func.SymbolName));
+              break;
            }
         }
         for (const auto& notify : wasmObj->notify()) {
            std::string sub = notify.substr(notify.find(":")+2);
            if (func.SymbolName == sub.substr(sub.find(":")+1)) {
               enqueue(symtab->find(func.SymbolName));
+              break;
            }
         }
      }
      for (const auto& import : wasmObj->imports()) {
-        enqueue(symtab->find(import.Field));
+        if (import.Field == "__wasm_call_ctors" || import.Field == "__cxa_finalize" ||
+            std::find(wasmObj->allowed_imports().begin(), wasmObj->allowed_imports().end(), import.Field) != wasmObj->allowed_imports().end()) {
+           enqueue(symtab->find(import.Field));
+        }
      }
   }
 
