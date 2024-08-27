@@ -36,8 +36,8 @@
 #include <cstdarg>
 #include <limits>
 #include <map>
-#include <eosio/abimerge.hpp>
-#include <eosio/utils.hpp>
+#include <sysio/abimerge.hpp>
+#include <sysio/utils.hpp>
 
 #define DEBUG_TYPE "lld"
 
@@ -675,8 +675,8 @@ static StringRef getOutputDataSegmentName(StringRef name) {
 
 void Writer::createOutputSegments() {
   for (ObjFile *file : symtab->objectFiles) {
-    if (!file->getEosioABI().empty())
-       abis.push_back(file->getEosioABI());
+    if (!file->getSysioABI().empty())
+       abis.push_back(file->getSysioABI());
     for (InputSegment *segment : file->segments) {
       if (!segment->live)
         continue;
@@ -709,10 +709,10 @@ static constexpr int OPCODE_I64_CONST  = 0x42;
 static constexpr int OPCODE_I64_STORE  = 0x37;
 static constexpr int OPCODE_I64_LOAD   = 0x29;
 static constexpr int OPCODE_I64_ADD    = 0x7c;
-static constexpr uint64_t EOSIO_COMPILER_ERROR_BASE = 8000000000000000000ull;
-static constexpr uint64_t EOSIO_ERROR_NO_ACTION     = EOSIO_COMPILER_ERROR_BASE;
-static constexpr uint64_t EOSIO_ERROR_ONERROR       = EOSIO_COMPILER_ERROR_BASE+1;
-static constexpr uint64_t EOSIO_CANARY_FAILURE      = EOSIO_COMPILER_ERROR_BASE+2;
+static constexpr uint64_t SYSIO_COMPILER_ERROR_BASE = 8000000000000000000ull;
+static constexpr uint64_t SYSIO_ERROR_NO_ACTION     = SYSIO_COMPILER_ERROR_BASE;
+static constexpr uint64_t SYSIO_ERROR_ONERROR       = SYSIO_COMPILER_ERROR_BASE+1;
+static constexpr uint64_t SYSIO_CANARY_FAILURE      = SYSIO_COMPILER_ERROR_BASE+2;
 
 static void createFunction(DefinedFunction *func, StringRef bodyContent) {
   std::string functionBody;
@@ -915,7 +915,7 @@ void Writer::createDispatchFunction() {
          writeU8(os, OPCODE_ELSE, "ELSE");
       }
       need_else = true;
-      uint64_t nm = eosio::cdt::string_to_name(str.substr(0, str.find(":")).c_str());
+      uint64_t nm = sysio::cdt::string_to_name(str.substr(0, str.find(":")).c_str());
       writeU8(os, OPCODE_I64_CONST, "I64 CONST");
       encodeSLEB128((int64_t)nm, os);
       writeU8(os, OPCODE_GET_LOCAL, "GET_LOCAL");
@@ -936,7 +936,7 @@ void Writer::createDispatchFunction() {
          throw std::runtime_error("wasm_ld internal error function not found");
    };
 
-   auto assert_sym = (FunctionSymbol*)symtab->find("eosio_assert_code");
+   auto assert_sym = (FunctionSymbol*)symtab->find("sysio_assert_code");
    uint32_t assert_idx = UINT32_MAX;
    if (assert_sym)
      assert_idx = assert_sym->getFunctionIndex();
@@ -950,8 +950,8 @@ void Writer::createDispatchFunction() {
       std::set<StringRef> has_dispatched;
       bool need_else = false;
       for (ObjFile *File : symtab->objectFiles) {
-        if (!File->getEosioActions().empty()) {
-            for (auto act : File->getEosioActions()) {
+        if (!File->getSysioActions().empty()) {
+            for (auto act : File->getSysioActions()) {
               if (has_dispatched.insert(act).second) {
                 create_if(OS, act.str(), need_else);
                 act_cnt++;
@@ -962,13 +962,13 @@ void Writer::createDispatchFunction() {
       if (act_cnt > 0)
         writeU8(OS, OPCODE_ELSE, "ELSE");
 
-      // do not fail if self == eosio
+      // do not fail if self == sysio
       writeU8(OS, OPCODE_GET_LOCAL, "GET_LOCAL");
       writeUleb128(OS, 0, "self");
       writeU8(OS, OPCODE_I64_CONST, "I64.CONST");
-      encodeSLEB128((int64_t)eosio::cdt::string_to_name("eosio"), OS);
+      encodeSLEB128((int64_t)sysio::cdt::string_to_name("sysio"), OS);
       writeU8(OS, OPCODE_I64_NE, "I64.NE");
-      writeU8(OS, OPCODE_IF, "if receiver != eosio");
+      writeU8(OS, OPCODE_IF, "if receiver != sysio");
       writeU8(OS, 0x40, "none");
 
       if (assert_sym && assert_idx < symtab->getSymbols().size()) {
@@ -976,7 +976,7 @@ void Writer::createDispatchFunction() {
         writeU8(OS, OPCODE_I32_CONST, "I32.CONST");
         writeUleb128(OS, 0, "false");
         writeU8(OS, OPCODE_I64_CONST, "I64.CONST");
-        encodeSLEB128((int64_t)EOSIO_ERROR_NO_ACTION, OS);
+        encodeSLEB128((int64_t)SYSIO_ERROR_NO_ACTION, OS);
         writeU8(OS, OPCODE_CALL, "CALL");
         writeUleb128(OS, assert_idx, "code");
       } else {
@@ -1007,8 +1007,8 @@ void Writer::createDispatchFunction() {
       std::set<StringRef> has_dispatched;
       std::map<std::string, std::vector<std::string>> notify_handlers;
       for (ObjFile *File : symtab->objectFiles) {
-         if (!File->getEosioNotify().empty()) {
-            for (auto notif : File->getEosioNotify()) {
+         if (!File->getSysioNotify().empty()) {
+            for (auto notif : File->getSysioNotify()) {
               if (has_dispatched.insert(notif).second) {
                 not_cnt++;
                 std::string snotif = notif.str();
@@ -1026,7 +1026,7 @@ void Writer::createDispatchFunction() {
       bool has_onerror_handler = false;
       if (not_cnt > 0) {
          for (auto const& notif0 : notify_handlers) {
-            if (notif0.first == "eosio") {
+            if (notif0.first == "sysio") {
                for (auto const& notif1 : notif0.second) {
                   if (notif1.substr(0, notif1.find(":")) == "onerror") {
                      has_onerror_handler = true;
@@ -1039,15 +1039,15 @@ void Writer::createDispatchFunction() {
       if (!has_onerror_handler) {
          // assert on onerror
          writeU8(OS, OPCODE_I64_CONST, "I64.CONST");
-         uint64_t acnt = eosio::cdt::string_to_name("eosio");
+         uint64_t acnt = sysio::cdt::string_to_name("sysio");
          encodeSLEB128((int64_t)acnt, OS);
          writeU8(OS, OPCODE_GET_LOCAL, "GET_LOCAL");
          writeUleb128(OS, 1, "code");
          writeU8(OS, OPCODE_I64_EQ, "I64.EQ");
-         writeU8(OS, OPCODE_IF, "IF code==eosio");
+         writeU8(OS, OPCODE_IF, "IF code==sysio");
          writeU8(OS, 0x40, "none");
          writeU8(OS, OPCODE_I64_CONST, "I64.CONST");
-         uint64_t nm = eosio::cdt::string_to_name("onerror");
+         uint64_t nm = sysio::cdt::string_to_name("onerror");
          encodeSLEB128((int64_t)nm, OS);
          writeU8(OS, OPCODE_GET_LOCAL, "GET_LOCAL");
          writeUleb128(OS, 2, "action");
@@ -1057,7 +1057,7 @@ void Writer::createDispatchFunction() {
          writeU8(OS, OPCODE_I32_CONST, "I32.CONST");
          writeUleb128(OS, 0, "false");
          writeU8(OS, OPCODE_I64_CONST, "I64.CONST");
-         encodeSLEB128((int64_t)EOSIO_ERROR_ONERROR, OS);
+         encodeSLEB128((int64_t)SYSIO_ERROR_ONERROR, OS);
          writeU8(OS, OPCODE_CALL, "CALL");
          writeUleb128(OS, assert_idx, "code");
          writeU8(OS, OPCODE_END, "END");
@@ -1069,7 +1069,7 @@ void Writer::createDispatchFunction() {
       if (not_cnt > 0) {
          bool has_written = false;
          for (auto const& notif0 : notify_handlers) {
-            uint64_t nm = eosio::cdt::string_to_name(notif0.first.c_str());
+            uint64_t nm = sysio::cdt::string_to_name(notif0.first.c_str());
             if (notif0.first == "*")
                continue;
             has_written = true;
@@ -1125,12 +1125,12 @@ void Writer::createDispatchFunction() {
       raw_string_ostream OS(BodyContent);
       writeUleb128(OS, 0, "num locals");
 
-      auto contract_sym = (FunctionSymbol*)symtab->find("eosio_set_contract_name");
+      auto contract_sym = (FunctionSymbol*)symtab->find("sysio_set_contract_name");
       uint32_t contract_idx = contract_sym->getFunctionIndex();
       writeU8(OS, OPCODE_GET_LOCAL, "GET_LOCAL");
       writeUleb128(OS, 0, "receiver");
       writeU8(OS, OPCODE_CALL, "CALL");
-      writeUleb128(OS, contract_idx, "eosio_set_contract_name");
+      writeUleb128(OS, contract_idx, "sysio_set_contract_name");
 
       // create ctors call
       auto ctors_sym = (FunctionSymbol*)symtab->find("__wasm_call_ctors");
@@ -1222,13 +1222,13 @@ void Writer::createDispatchFunction() {
         writeU8(OS, OPCODE_IF, "if canary doesn't equal global held canary");
         writeU8(OS, 0x40, "none");
 
-        auto assert_sym = (FunctionSymbol*)symtab->find("eosio_assert_code");
+        auto assert_sym = (FunctionSymbol*)symtab->find("sysio_assert_code");
         writeU8(OS, OPCODE_I32_CONST, "i32.const");
         writeUleb128(OS, 0, "false");
         writeU8(OS, OPCODE_I64_CONST, "i64.const");
-        encodeSLEB128((int64_t)EOSIO_CANARY_FAILURE, OS);
+        encodeSLEB128((int64_t)SYSIO_CANARY_FAILURE, OS);
         writeU8(OS, OPCODE_CALL, "CALL");
-        writeUleb128(OS, assert_sym->getFunctionIndex(), "eosio_assert_code");
+        writeUleb128(OS, assert_sym->getFunctionIndex(), "sysio_assert_code");
         writeU8(OS, OPCODE_END, "END");
       }
       auto dtors_sym = (FunctionSymbol*)symtab->find("__cxa_finalize");

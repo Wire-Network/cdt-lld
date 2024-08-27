@@ -259,9 +259,9 @@ void ObjFile::parse(bool ignoreComdats) {
     }
   }
 
-  eosioABI     = wasmObj->get_eosio_abi();
-  eosioActions = wasmObj->actions();
-  eosioNotify  = wasmObj->notify();
+  sysioABI     = wasmObj->get_sysio_abi();
+  sysioActions = wasmObj->actions();
+  sysioNotify  = wasmObj->notify();
 
   uint32_t sectionIndex = 0;
 

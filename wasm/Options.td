@@ -165,7 +165,7 @@ def no_entry: F<"no-entry">,
   HelpText<"Do not output any entry point">;
 
 def other_model: F<"other-model">,
-  HelpText<"Linking with a model other than EOSIO smart contract">;
+  HelpText<"Linking with a model other than SYSIO smart contract">;
 
 def stack_canary: F<"stack-canary">,
   HelpText<"Place canary system between stack and data to ensure stack overflows are caught. (Don't use this option with -stack-first">;
