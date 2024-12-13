@@ -89,8 +89,8 @@ void lld::wasm::markLive() {
   for (const ObjFile* obj : symtab->objectFiles) {
      const auto& wasmObj = obj->getWasmObj();
      for (const auto& func : wasmObj->functions()) {
-        if (func.SymbolName == "pre_dispatch" || func.SymbolName == "post_dispatch" || func.SymbolName == "eosio_assert_code" ||
-            func.SymbolName == "eosio_set_contract_name") {
+        if (func.SymbolName == "pre_dispatch" || func.SymbolName == "post_dispatch" || func.SymbolName == "sysio_assert_code" ||
+            func.SymbolName == "sysio_set_contract_name") {
            enqueue(symtab->find(func.SymbolName));
            continue;
         }

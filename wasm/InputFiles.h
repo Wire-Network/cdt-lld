@@ -132,18 +132,18 @@ public:
   GlobalSymbol *getGlobalSymbol(uint32_t index) const;
   SectionSymbol *getSectionSymbol(uint32_t index) const;
   EventSymbol *getEventSymbol(uint32_t index) const;
-  std::string getEosioABI() const { return eosioABI; }
-  ArrayRef<StringRef> getEosioActions() const { return eosioActions; }
-  ArrayRef<StringRef> getEosioNotify() const { return eosioNotify; }
+  std::string getSysioABI() const { return sysioABI; }
+  ArrayRef<StringRef> getSysioActions() const { return sysioActions; }
+  ArrayRef<StringRef> getSysioNotify() const { return sysioNotify; }
 
 private:
   Symbol *createDefined(const WasmSymbol &sym);
   Symbol *createUndefined(const WasmSymbol &sym, bool isCalledDirectly);
 
   bool isExcludedByComdat(InputChunk *chunk) const;
-  std::string eosioABI;
-  ArrayRef<StringRef> eosioActions;
-  ArrayRef<StringRef> eosioNotify;
+  std::string sysioABI;
+  ArrayRef<StringRef> sysioActions;
+  ArrayRef<StringRef> sysioNotify;
 
   std::unique_ptr<WasmObjectFile> wasmObj;
 };
